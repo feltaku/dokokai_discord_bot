@@ -1,17 +1,15 @@
-# Node.jsのバージョン、変える事。
-FROM node:18
+# ベースイメージ
+FROM python:3.11
 
-# 作業ディレクトリを /app に
+# 作業ディレクトリ
 WORKDIR /app
 
-# app フォルダ内の内容をコンテナの /app にコピー
-COPY app/ .
+# 依存関係インストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 依存関係のインストール
-RUN npm install
+# ソースコードをコピー
+COPY . .
 
-# ポートを開ける（Koyeb用）、使用してるポート番号にすること。
-EXPOSE 3000
-
-# アプリの起動、コマンドを指定しよう。index.jsなら"node", "index.js"
-CMD ["node", "main.mjs"]
+# 実行コマンド
+CMD ["python", "main.py"]
