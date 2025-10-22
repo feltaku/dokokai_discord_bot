@@ -2,31 +2,19 @@
 import discord
 from discord.ext import commands
 import asyncio
-from aiohttp import web
-
-# -------------------------
-# ダミーHTTPサーバー（ヘルスチェック用）
-# -------------------------
-async def handle(request):
-    return web.Response(text="Bot is alive")
-
-async def start_web():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, port=8000)  # Koyeb のヘルスチェック用ポート
-    await site.start()
-
 
 #サーバーのID
 #深夜鯖1222402209992671262
 #個人鯖1260616353971441694
 #同好会1026051164782993478
 
+#トークン
+#試験用_MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
+#管理用_MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
+
 #botと接続
-TOKEN = 'MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU'
-GUILD = discord.Object(id=int('1026051164782993478'))
+TOKEN = 'MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU'
+GUILD = discord.Object(id=int('1260616353971441694'))
 intents = discord.Intents.all()
 
 intents.message_content = True
@@ -46,20 +34,19 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
-async def start_bot():
+async def load_cogs():
     await bot.load_extension("cogs.role")
     await bot.load_extension("cogs.admin")
     await bot.load_extension("cogs.test")
     await bot.load_extension("cogs.member")
-
-    await bot.start(TOKEN)
+    await bot.load_extension("cogs.join")
 
 async def main():
-    # ダミーHTTPサーバーとBotを同時に起動
-    asyncio.create_task(start_web())
-    await start_bot()
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
-
+# --- 実行 ---
 if __name__ == "__main__":
     asyncio.run(main())
 
