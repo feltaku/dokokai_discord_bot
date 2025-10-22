@@ -13,8 +13,8 @@ import asyncio
 #管理用_MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
 
 #botと接続
-TOKEN = 'MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU'
-GUILD = discord.Object(id=int('1260616353971441694'))
+TOKEN = 'MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU'
+GUILD = discord.Object(id=int('1026051164782993478'))
 intents = discord.Intents.all()
 
 intents.message_content = True
@@ -49,4 +49,5 @@ async def main():
 # --- 実行 ---
 if __name__ == "__main__":
     asyncio.run(main())
+
 
