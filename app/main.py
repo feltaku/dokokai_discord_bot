@@ -8,9 +8,13 @@ import asyncio
 #個人鯖1260616353971441694
 #同好会1026051164782993478
 
+#トークン
+#試験用_MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
+#管理用_MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
+
 #botと接続
-TOKEN = 'MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU'
-GUILD = discord.Object(id=int('1026051164782993478'))
+TOKEN = 'MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU'
+GUILD = discord.Object(id=int('1260616353971441694'))
 intents = discord.Intents.all()
 
 intents.message_content = True
@@ -30,14 +34,19 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
-async def main():
+async def load_cogs():
     await bot.load_extension("cogs.role")
     await bot.load_extension("cogs.admin")
     await bot.load_extension("cogs.test")
     await bot.load_extension("cogs.member")
+    await bot.load_extension("cogs.join")
 
-    await bot.start(TOKEN)
+async def main():
+    async with bot:
+        await load_cogs()
+        await bot.start(TOKEN)
 
+# --- 実行 ---
 if __name__ == "__main__":
     asyncio.run(main())
 
