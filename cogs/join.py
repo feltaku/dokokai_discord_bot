@@ -41,7 +41,8 @@ class JoinCog(commands.Cog):
                 embed.add_field(name=question, value=answer, inline=False)
 
             if image_url:
-                embed.set_image(url=image_url)
+                view = Button_Call()
+                embed.set_image(url=image_url, view=view)
 
             embed.set_footer(text="自動送信: Googleフォーム連携BOT")
 
@@ -60,6 +61,30 @@ class JoinCog(commands.Cog):
         print(f"Flask webhook server running on port {port}")
         self.app.run(host="0.0.0.0", port=port)
 
+#モーダルを呼ぶボタン
+class Button_Call(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label='確認', style=discord.ButtonStyle.primary)
+    async def button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(Inputname_modal())
+
+#モーダル
+class Inputname_modal(discord.ui.Modal, title="入会者の名前"):
+    comment = discord.ui.TextInput(
+        label="入会者の名前を入力してね",
+        placeholder="例:ふぇると",
+        required=True
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        editer = interaction.user.display_name
+        await interaction.response.edit_message(
+            content=f"**{self.comment.value}**\n{editer}が確認しました",
+            embed=None,
+            view=None
+        )
 
 async def setup(bot):
     await bot.add_cog(JoinCog(bot))
