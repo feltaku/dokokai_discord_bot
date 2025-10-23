@@ -41,15 +41,16 @@ class JoinCog(commands.Cog):
                 embed.add_field(name=question, value=answer, inline=False)
 
             if image_url:
-                view = Button_Call()
-                embed.set_image(url=image_url, view=view)
+                embed.set_image(url=image_url)
 
             embed.set_footer(text="自動送信: Googleフォーム連携BOT")
 
+            view = Button_Call()
+            
             async def send_embed():
                 channel = self.bot.get_channel(CHANNEL_ID)
                 if channel:
-                    await channel.send(embed=embed)
+                    await channel.send(embed=embed, view=view)
                 else:
                     print(f"チャンネルID {CHANNEL_ID} が見つかりません")
 
