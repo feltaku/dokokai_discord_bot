@@ -86,10 +86,10 @@ class Inputname_modal(discord.ui.Modal, title="入会者の名前"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        editer = interaction.user.display_name
-        editer_id = interaction.user.id
+        display = interaction.user.display_name
+        username = interaction.user.name
         await interaction.response.edit_message(
-            content=f"**{self.comment.value}**\n{editer}({editer_id})が確認しました",
+            content=f"**{self.comment.value}**\n{display}({username})が確認しました",
             embed=None,
             view=None
         )
