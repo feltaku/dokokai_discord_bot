@@ -47,11 +47,10 @@ class JoinCog(commands.Cog):
 
                 embed.set_footer(text="自動送信: Googleフォーム連携BOT")
 
-                # ← View生成も含めて「Botのイベントループ」で実行！
                 async def send_embed():
                     channel = self.bot.get_channel(CHANNEL_ID)
                     if channel:
-                        view = Button_Call()  # ← ここで生成！
+                        view = Button_Call() 
                         await channel.send(embed=embed, view=view)
                     else:
                         print(f"チャンネルID {CHANNEL_ID} が見つかりません")
@@ -60,7 +59,7 @@ class JoinCog(commands.Cog):
                 return jsonify({"status": "success"}), 200
 
             except Exception as e:
-                print("❌ Webhook処理中にエラー発生:")
+                print("Webhook処理中にエラー発生:")
                 traceback.print_exc()
                 return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -88,8 +87,9 @@ class Inputname_modal(discord.ui.Modal, title="入会者の名前"):
 
     async def on_submit(self, interaction: discord.Interaction):
         editer = interaction.user.display_name
+        editer_id = interaction.user.id
         await interaction.response.edit_message(
-            content=f"**{self.comment.value}**\n{editer}が確認しました",
+            content=f"**{self.comment.value}**\n{editer}({editer_id})が確認しました",
             embed=None,
             view=None
         )
