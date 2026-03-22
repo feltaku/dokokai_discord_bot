@@ -1,78 +1,71 @@
-
 import discord
 from discord.ext import commands
+from discord.commands import slash_command
 from datetime import datetime, timezone
 
-GUILD = discord.Object(id=int('1026051164782993478'))
-
-#年度ごとのロール規則
-role_rules = {
-    "2022" : (datetime(2022, 4, 1, tzinfo=timezone.utc),
-              datetime(2023, 3, 31, tzinfo=timezone.utc),
-              "22"),
-
-    "2023" : (datetime(2023, 4, 1, tzinfo=timezone.utc),
-              datetime(2024, 3, 31, tzinfo=timezone.utc),
-              "23"),
-
-    "2024" : (datetime(2024, 4, 1, tzinfo=timezone.utc),
-              datetime(2025, 3, 31, tzinfo=timezone.utc),
-              "24"),
-
-    "2025" : (datetime(2025, 4, 1, tzinfo=timezone.utc),
-              datetime(2026, 3, 31, tzinfo=timezone.utc),
-              "25")
-    }
 
 class rolecog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(
-        name="role",
-        description="入会年度でロールを付与"
-    )
+    def make_year_range(self, year_str: str):
+        try:
+            year_int = int(year_str)
+        except ValueError:
+            return None
+
+        return (
+            datetime(year_int, 4, 1, tzinfo=timezone.utc),
+            datetime(year_int + 1, 4, 1, tzinfo=timezone.utc),
+            year_str[-2:]
+        )
+
+    @slash_command(name="role", description="年度ごとにロールを付与します")
     async def role(
-            self,
-            ctx: discord.Interaction,
-            action: str,
-            year: str
+        self,
+        ctx,
+        action: str,
+        year: str,
+        role_name: str
     ):
         if action != "add":
-            await ctx.response.send_message("現在はaddのみ対応", ephemeral=True)
+            await ctx.respond("action には add を指定してください", ephemeral=True)
             return
 
-        if year not in role_rules:
-            await ctx.response.send_message("指定した年度は追加されていません", ephemeral=True)
-            return
-
-        start_date, end_date, role_name = role_rules[year]
         guild = ctx.guild
         role = discord.utils.get(guild.roles, name=role_name)
 
         if role is None:
-            await ctx.response.send_message(f"{role_name} が見つかりません", ephemeral=True)
+            await ctx.respond(f"ロール {role_name} が見つかりません", ephemeral=True)
             return
 
-        #仮メッセージ
-        msg =  await ctx.send(f"{year}年度のロール付与を受け付けました", ephemeral=True)
+        year_range = self.make_year_range(year)
+        if year_range is None:
+            await ctx.respond("年度は 2026 のように4桁の数字で入力してください", ephemeral=True)
+            return
+
+        start_date, end_date, _ = year_range
+
+        await ctx.respond(
+            f"{year}年度のロール付与を受け付けました",
+            ephemeral=True
+        )
 
         count = 0
         for member in guild.members:
             if member.bot:
                 continue
 
-            if member.joined_at and start_date <= member.joined_at <= end_date:
+            if member.joined_at and start_date <= member.joined_at < end_date:
                 if role not in member.roles:
                     await member.add_roles(role)
                 count += 1
 
-        await msg.edit(
-            content = f"{year}年度の条件に合うメンバー{count}人に{role_name}を付与しました。"
+        await ctx.followup.send(
+            f"{year}年度の条件に合うメンバー{count}人に{role_name}を付与しました。",
+            ephemeral=True
         )
 
-async def setup(bot):
-    await bot.add_cog(rolecog(bot))
 
-
-
+def setup(bot):
+    bot.add_cog(rolecog(bot))
