@@ -16,7 +16,7 @@ import os
 
 #botと接続
 TOKEN = os.environ.get('MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU')
-GUILD_ID = 1260616353971441694
+GUILD_ID = 1026051164782993478
 intents = discord.Intents.all()
 
 bot = commands.Bot(command_prefix="!", intents=intents)
