@@ -12,10 +12,10 @@ import os
 
 #トークン
 #試験用 _ MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
-#管理用 _ MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
+#管理用 _ MTM2NzQxNjM5MzkyNjE4NTA1Mg.GZPR-W.Yo5Fd18fKS_ZmNx6mcbk0rSzfZ4uVCK7cQ7JoM
 
 #botと接続
-TOKEN = os.environ.get('MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU')
+TOKEN = os.environ.get('MTM2NzQxNjM5MzkyNjE4NTA1Mg.GZPR-W.Yo5Fd18fKS_ZmNx6mcbk0rSzfZ4uVCK7cQ7JoM')
 GUILD_ID = 1026051164782993478
 intents = discord.Intents.all()
 
