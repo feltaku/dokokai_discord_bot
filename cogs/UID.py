@@ -747,7 +747,7 @@ def generation(data):
             )
 
     Shadow = open_image_url(
-        github_url("Assets", "shadow.png"),
+        github_url("Assets", "Shadow.png"),
         "RGBA"
     ).resize(Base.size)
 
