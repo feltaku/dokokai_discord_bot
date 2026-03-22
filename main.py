@@ -5,17 +5,8 @@ import asyncio
 from aiohttp import web
 import os
 
-#サーバーのID
-#深夜鯖 1222402209992671262
-#個人鯖 1260616353971441694
-#同好会 1026051164782993478
 
-#トークン
-#試験用_MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
-#管理用_MTM2NzQxNjM5MzkyNjE4NTA1Mg.GZPR-W.Yo5Fd18fKS_ZmNx6mcbk0rSzfZ4uVCK7cQ7JoM
-
-#botと接続
-TOKEN = os.environ.get('MTM2NzQxNjM5MzkyNjE4NTA1Mg.GZPR-W.Yo5Fd18fKS_ZmNx6mcbk0rSzfZ4uVCK7cQ7JoM')
+TOKEN = os.environ.get('TOKEN')
 GUILD_ID = 1026051164782993478
 intents = discord.Intents.all()
 
