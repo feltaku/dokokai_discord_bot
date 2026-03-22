@@ -15,12 +15,15 @@ import os
 #管理用 _ MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
 
 #botと接続
-TOKEN = 'MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU'
+TOKEN = os.environ.get('MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU')
 GUILD_ID = 1260616353971441694
 intents = discord.Intents.all()
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 path = "./cogs"
+
+async def health_check(request):
+    return web.Response(text="OK", status=200)
 
 async def handle_webhook(request):
     try:
@@ -41,6 +44,7 @@ async def handle_webhook(request):
     
 async def start_web_server():
     app = web.Application()
+    app.router.add_get("/", health_check)
     app.router.add_post("/webhook", handle_webhook)
 
     runner = web.AppRunner(app)
