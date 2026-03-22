@@ -15,7 +15,7 @@ import os
 #管理用 _ MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
 
 #botと接続
-TOKEN = os.environ.get('MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU')
+TOKEN = os.environ.get('MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU')
 GUILD_ID = 1260616353971441694
 intents = discord.Intents.all()
 
