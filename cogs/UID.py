@@ -122,6 +122,8 @@ SCORE_MODE_LABELS = {
     "em": "元素熟知",
 }
 
+def clear_image_cache():
+    _IMAGE_CACHE.clear()
 
 # ====JSON 読み込み====
 
@@ -146,7 +148,7 @@ def open_image_url(
     convert_mode: str | None = None,
     *,
     use_cache: bool = True,
-    cache_max_pixels: int = 600_000
+    cache_max_pixels: int = 300_000
 ):
     cache_key = (url, convert_mode)
 
@@ -740,7 +742,7 @@ def generation(data):
 
     config_font = lambda size: open_font_url(github_url("Assets", "ja-jp.ttf"), size)
 
-    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA", use_cache=True)
+    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA", use_cache=False)
 
     CharacterCostume = CharacterData.get('Costume')
     if CharacterName in ['蛍', '空']:
@@ -766,6 +768,7 @@ def generation(data):
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
         "RGBA"
+        use_cache=False
     ).resize(Base.size)
 
     CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
@@ -1174,6 +1177,7 @@ def generation(data):
 
     result = pil_to_bytes(Base, "PNG")
     Base.close()
+    clear_image_cache()
     return result
 
 
