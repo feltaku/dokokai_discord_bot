@@ -2,52 +2,84 @@
 import discord
 from discord.ext import commands
 import asyncio
+from aiohttp import web
+import os
 
 #サーバーのID
-#深夜鯖1222402209992671262
-#個人鯖1260616353971441694
-#同好会1026051164782993478
+#深夜鯖 1222402209992671262
+#個人鯖 1260616353971441694
+#同好会 1026051164782993478
 
 #トークン
-#試験用_MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
-#管理用_MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
+#試験用 _ MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU
+#管理用 _ MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU
 
 #botと接続
-TOKEN = 'MTM2NzQxNjM5MzkyNjE4NTA1Mg.GVm7JP.PyDo9sPO0OXRMipC3PnsXYg3FRrleduQ2WWZiU'
-GUILD = discord.Object(id=int('1026051164782993478'))
+TOKEN = 'MTQyMjYzNDY3MDg4MDcxODg2OQ.G0Dl_j.r2RPg5M46QuXVpgBVCKuDQrhW7eAvxyGq0ryeU'
+GUILD_ID = 1260616353971441694
 intents = discord.Intents.all()
-
-intents.message_content = True
-intents.guilds = True
-intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 path = "./cogs"
 
-#botの起動
+async def handle_webhook(request):
+    try:
+        data = await request.json()
+
+        await bot.wait_until_ready()
+
+        join_cog = bot.get_cog("JoinCog")
+        if join_cog is None:
+            return web.Response(text="JoinCog not found", status=500)
+
+        await join_cog.send_form_notification(data)
+        return web.Response(text="OK", status=200)
+
+    except Exception as e:
+        print(f"Webhook処理中にエラー: {e}")
+        return web.Response(text="Error", status=500)
+    
+async def start_web_server():
+    app = web.Application()
+    app.router.add_post("/webhook", handle_webhook)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.environ.get("PORT", 5000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    print(f"Webhookサーバ起動中 → ポート {port}")
+
+
 @bot.event
 async def on_ready():
-    print(f" {bot.user}がログインしました (ID: {bot.user.id})")
+    print(f"{bot.user}がログインしました (ID: {bot.user.id})")
     try:
-        synced = await bot.tree.sync()
-        print(f" {len(synced)} 個のコマンドを同期しました")
+        synced = await bot.sync_commands(guild_ids=[GUILD_ID])
+
+        if synced is None:
+            print("コマンド同期は完了しました")
+        else:
+            print(f"{len(synced)} 個のコマンドを同期しました")
+
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
-async def load_cogs():
-    await bot.load_extension("cogs.role")
-    await bot.load_extension("cogs.admin")
-    await bot.load_extension("cogs.test")
-    await bot.load_extension("cogs.member")
-    await bot.load_extension("cogs.join")
+def load_cogs():
+    bot.load_extension("cogs.role")
+    bot.load_extension("cogs.admin")
+    bot.load_extension("cogs.test")
+    bot.load_extension("cogs.member")
+    bot.load_extension("cogs.join")
+    bot.load_extension("cogs.UID")
 
 async def main():
-    async with bot:
-        await load_cogs()
-        await bot.start(TOKEN)
+    load_cogs()
+    await start_web_server()
+    await bot.start(TOKEN)
 
-# --- 実行 ---
+
 if __name__ == "__main__":
     asyncio.run(main())
-
-
