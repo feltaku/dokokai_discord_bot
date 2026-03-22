@@ -141,20 +141,34 @@ def github_url(*parts: str):
     return f"{IMAGE_BASE}/" + "/".join(encoded)
 
 
-def open_image_url(url: str, convert_mode: str | None = None):
+def open_image_url(
+    url: str,
+    convert_mode: str | None = None,
+    *,
+    use_cache: bool = True,
+    cache_max_pixels: int = 600_000
+):
     cache_key = (url, convert_mode)
 
-    if cache_key in _IMAGE_CACHE:
+    if use_cache and cache_key in _IMAGE_CACHE:
         return _IMAGE_CACHE[cache_key].copy()
 
     response = HTTP.get(url, timeout=20)
     response.raise_for_status()
 
-    img = Image.open(BytesIO(response.content))
-    if convert_mode:
-        img = img.convert(convert_mode)
+    image_bytes = BytesIO(response.content)
+    try:
+        with Image.open(image_bytes) as im:
+            if convert_mode:
+                img = im.convert(convert_mode)
+            else:
+                img = im.copy()
+    finally:
+        image_bytes.close()
 
-    _IMAGE_CACHE[cache_key] = img.copy()
+    if use_cache and (img.width * img.height) <= cache_max_pixels:
+        _IMAGE_CACHE[cache_key] = img.copy()
+
     return img
 
 
@@ -726,24 +740,27 @@ def generation(data):
 
     config_font = lambda size: open_font_url(github_url("Assets", "ja-jp.ttf"), size)
 
-    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA")
+    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA", use_cache=True)
 
     CharacterCostume = CharacterData.get('Costume')
     if CharacterName in ['蛍', '空']:
         CharacterImage = open_image_url(
             github_url("character", f"{CharacterName}({element})", "avatar.png"),
-            "RGBA"
+            "RGBA",
+            use_cache=False
         )
     else:
         if CharacterCostume:
             CharacterImage = open_image_url(
-            github_url("character", CharacterName, f"{CharacterCostume}.png"),
-            "RGBA"
-        )
+                github_url("character", CharacterName, f"{CharacterCostume}.png"),
+                "RGBA",
+                use_cache=False
+            )
         else:
             CharacterImage = open_image_url(
                 github_url("character", CharacterName, "avatar.png"),
-                "RGBA"
+                "RGBA",
+                use_cache=False
             )
 
     Shadow = open_image_url(
@@ -775,9 +792,10 @@ def generation(data):
     Base = Image.alpha_composite(Base, Shadow)
 
     WeaponImage = open_image_url(
-            github_url("weapon", f"{WeaponName}.png"),
-            "RGBA"
-        ).resize((128, 128))
+        github_url("weapon", f"{WeaponName}.png"),
+        "RGBA",
+        use_cache=False
+    ).resize((128, 128))
     WeaponPaste = Image.new("RGBA", Base.size, (255, 255, 255, 0))
     WeaponMask = WeaponImage.copy()
     WeaponPaste.paste(WeaponImage, (1430, 50), mask=WeaponMask)
@@ -804,7 +822,8 @@ def generation(data):
         TalentPaste = Image.new("RGBA", TalentBase.size, (255, 255, 255, 0))
         Talent = open_image_url(
             github_url("character", CharacterName, f"{t}.png"),
-            "RGBA"
+            "RGBA",
+            use_cache=False
         ).resize((50, 50))
         TalentMask = Talent.copy()
         TalentPaste.paste(Talent, (TalentPaste.width // 2 - 25, TalentPaste.height // 2 - 25), mask=TalentMask)
@@ -832,7 +851,8 @@ def generation(data):
         else:
             CharaC = open_image_url(
                 github_url("character", CharacterName, f"{c}.png"),
-                "RGBA"
+                "RGBA",
+                use_cache=False
             ).resize((45, 45))
             CharaCPaste = Image.new("RGBA", CBase.size, (255, 255, 255, 0))
             CharaCMask = CharaC.copy()
@@ -1013,7 +1033,8 @@ def generation(data):
         PreviewPaste = Image.new('RGBA', Base.size, (255, 255, 255, 0))
         Preview = open_image_url(
             github_url("Artifact", details["type"], f"{parts}.png"),
-            "RGBA"
+            "RGBA",
+            use_cache=False
         ).resize((256, 256))
         enhancer = ImageEnhance.Brightness(Preview)
         Preview = enhancer.enhance(0.6)
@@ -1151,7 +1172,9 @@ def generation(data):
             D.rounded_rectangle((1818, 263, 1862, 288), 1, 'black')
             D.text((1831, 265), str(q), font=config_font(19))
 
-    return pil_to_bytes(Base, "PNG")
+    result = pil_to_bytes(Base, "PNG")
+    Base.close()
+    return result
 
 
 # ====Embed====
@@ -1352,6 +1375,8 @@ class GenerateImageButton(discord.ui.Button):
             )
             return
 
+        await interaction.response.defer()
+
         selected_char = self.parent_view.characters[self.parent_view.current_character_index]
         generation_data = build_generation_data(
             raw_data=self.parent_view.data,
@@ -1363,37 +1388,43 @@ class GenerateImageButton(discord.ui.Button):
 
         try:
             image_buffer = generation(generation_data)
+            file = discord.File(image_buffer, filename="buildcard.png")
+
+            await interaction.edit_original_response(
+                content=f"ビルドカードを表示中です。スコア方式: {SCORE_MODE_LABELS[self.parent_view.score_mode]}",
+                embed=None,
+                attachments=[],
+                files=[file],
+                view=self.parent_view
+            )
+
         except requests.HTTPError as e:
-            await interaction.response.send_message(
-                f"必要な画像またはデータがGitHub上に見つかりませんでした。\n{type(e).__name__}: {e}",
-                ephemeral=True
+            await interaction.edit_original_response(
+                content=f"必要な画像またはデータがGitHub上に見つかりませんでした。\n{type(e).__name__}: {e}",
+                embed=None,
+                attachments=[],
+                view=self.parent_view
             )
             return
+
         except FileNotFoundError as e:
             missing_path = str(e).split(":")[-1].strip().strip("'")
-            await interaction.response.send_message(
-                f"必要な画像が見つかりませんでした。\n不足ファイル: {missing_path}",
-                ephemeral=True
+            await interaction.edit_original_response(
+                content=f"必要な画像が見つかりませんでした。\n不足ファイル: {missing_path}",
+                embed=None,
+                attachments=[],
+                view=self.parent_view
             )
             return
+
         except Exception as e:
-            await interaction.response.send_message(
-                f"画像生成中にエラーが発生しました。\n{type(e).__name__}: {e}",
-                ephemeral=True
+            await interaction.edit_original_response(
+                content=f"画像生成中にエラーが発生しました。\n{type(e).__name__}: {e}",
+                embed=None,
+                attachments=[],
+                view=self.parent_view
             )
             return
-
-        file = discord.File(image_buffer, filename="buildcard.png")
-
-        await interaction.response.defer()
-
-        await interaction.edit_original_response(
-            content=f"ビルドカードを表示中です。スコア方式: {SCORE_MODE_LABELS[self.parent_view.score_mode]}",
-            embed=None,
-            attachments=[],
-            files=[file],
-            view=self.parent_view
-    )
 
 
 class CharacterSelectView(discord.ui.View):
