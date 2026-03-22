@@ -7,12 +7,12 @@ class membercog(commands.Cog):
 
 
     #memberコマンド
-    @commands.hybrid_command(
+    @commands.slash_command(
         name="member",
         description="現在チャットルームにいるメンバーを表示"
     )
 
-    async def member(self, ctx: commands.Context):
+    async def member(self, ctx):
         channel = ctx.channel
 
         if isinstance(channel, discord.TextChannel):
@@ -33,9 +33,10 @@ class membercog(commands.Cog):
         info_lines = [f"{member.display_name} ({str(member)})" for member in member]
         info_text = "\n".join(info_lines)
 
-        await ctx.send("**メンバー一覧**", ephemeral=True)
-        await ctx.send(info_text, ephemeral=True)
-        await ctx.send(f"合計人数: {len(member)}", ephemeral=True)
+        await ctx.respond(
+            "**メンバー一覧**\n" + info_text + f"\n合計人数: {len(member)}", 
+            ephemeral=True
+            )
 
-async def setup(bot):
-    await bot.add_cog(membercog(bot))
+def setup(bot):
+    bot.add_cog(membercog(bot))
