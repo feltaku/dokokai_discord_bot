@@ -8,17 +8,17 @@ class testcog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(
+    @commands.slash_command(
         name="test",
         description="test command"
     )
 
-    async def test(self, ctx: commands.Context):
-            msg = await ctx.send("テキスト", ephemeral=True)
+    async def test(self, ctx):
+            msg = await ctx.respond("テキスト", ephemeral=True)
 
             await asyncio.sleep(3)
 
             await msg.edit(content="編集済み")
 
-async def setup(bot):
-    await bot.add_cog(testcog(bot))
+def setup(bot):
+    bot.add_cog(testcog(bot))
