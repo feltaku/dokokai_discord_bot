@@ -36,17 +36,15 @@ def format_form_answers(answers):
         lines.append("")
 
     name_line = ""
+
     if last_name or first_name:
         name_line = f"{last_name}　{first_name}".strip()
 
-    kana_parts = []
-    if last_name_kana:
-        kana_parts.append(last_name_kana)
-    if first_name_kana:
-        kana_parts.append(first_name_kana)
+    kana_text = ""
+    if last_name_kana or first_name_kana:
+        kana_text = f"{last_name_kana}　{first_name_kana}".strip()
 
-    if kana_parts:
-        kana_text = "　".join(kana_parts)
+    if kana_text:
         if name_line:
             name_line = f"{name_line}　({kana_text})"
         else:
