@@ -1,7 +1,85 @@
 import discord
 from discord.ext import commands
 
-CHANNEL_ID = 1430175646381772871  # 送信先チャンネル
+
+CHANNEL_ID = 1430175646381772871
+
+
+def format_form_answers(answers):
+    answer_map = {}
+    for item in answers:
+        question = str(item.get("question", "")).strip()
+        answer = item.get("answer", "")
+
+        if isinstance(answer, list):
+            answer = " ".join(str(v).strip() for v in answer if str(v).strip())
+        else:
+            answer = str(answer).strip()
+
+        answer_map[question] = answer
+
+    handle_name = answer_map.get("ハンドルネームを入力してください", "")
+    last_name = answer_map.get("あなたの苗字を入力してください", "")
+    last_name_kana = answer_map.get("苗字のフリガナを入力してください", "")
+    first_name = answer_map.get("あなたの名前を入力してください", "")
+    first_name_kana = answer_map.get("名前のフリガナ入力してください", "")
+    waseda_check = answer_map.get("早稲田大学の生徒ですか", "")
+    faculty = answer_map.get("学部を教えてください。", "")
+    other_university_and_faculty = answer_map.get("大学名と学部を教えてください。", "")
+    student_id = answer_map.get("学籍番号を教えてください。", "")
+
+    lines = []
+
+    if handle_name:
+        lines.append("**ハンドルネーム**")
+        lines.append(handle_name)
+        lines.append("")
+
+    name_line = ""
+    if last_name or first_name:
+        name_line = f"{last_name}　{first_name}".strip()
+
+    kana_parts = []
+    if last_name_kana:
+        kana_parts.append(last_name_kana)
+    if first_name_kana:
+        kana_parts.append(first_name_kana)
+
+    if kana_parts:
+        kana_text = "　".join(kana_parts)
+        if name_line:
+            name_line = f"{name_line}　({kana_text})"
+        else:
+            name_line = f"({kana_text})"
+
+    if name_line:
+        lines.append("**名前**")
+        lines.append(name_line)
+        lines.append("")
+
+    university_block = []
+
+    if waseda_check == "はい":
+        if faculty:
+            university_block.append(f"早稲田大学　{faculty}")
+        else:
+            university_block.append("早稲田大学")
+
+        if student_id:
+            university_block.append(student_id)
+
+    elif waseda_check == "いいえ":
+        if other_university_and_faculty:
+            university_block.append(other_university_and_faculty)
+        if student_id:
+            university_block.append(student_id)
+
+    if university_block:
+        lines.append("**大学**")
+        lines.extend(university_block)
+
+    return "\n".join(lines).strip()
+
 
 class JoinCog(commands.Cog):
     def __init__(self, bot):
@@ -16,28 +94,24 @@ class JoinCog(commands.Cog):
         image_url = data.get("image")
 
         embed = discord.Embed(title="フォーム提出通知")
-        text = ""
-        for item in answers:
-            text += f"**{item['question']}**\n{item['answer']}\n\n"
-        embed.description = text
+        embed.description = format_form_answers(answers)
 
-        view = None
+        view = Button_Call()
         if image_url:
             embed.set_image(url=image_url)
-            view = Button_Call()
 
         await channel.send(embed=embed, view=view)
 
-#モーダルを呼ぶボタン
+
 class Button_Call(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label='確認', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="確認", style=discord.ButtonStyle.primary, custom_id="join_confirm_button")
     async def button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(Inputname_modal())
 
-#モーダル
+
 class Inputname_modal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="入会者の名前")
@@ -59,6 +133,8 @@ class Inputname_modal(discord.ui.Modal):
             embed=None,
             view=None
         )
-        
+
+
 def setup(bot):
     bot.add_cog(JoinCog(bot))
+    bot.add_view(Button_Call())
