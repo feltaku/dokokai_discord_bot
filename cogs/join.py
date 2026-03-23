@@ -108,7 +108,7 @@ class Button_Call(discord.ui.View):
         super().__init__(timeout=None)
 
     @discord.ui.button(label="確認", style=discord.ButtonStyle.primary, custom_id="join_confirm_button")
-    async def button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def button(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(Inputname_modal())
 
 
