@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-CHANNEL_ID = 1367572896821805066  # 送信先チャンネル
+CHANNEL_ID = 1430175646381772871  # 送信先チャンネル
 
 class JoinCog(commands.Cog):
     def __init__(self, bot):
