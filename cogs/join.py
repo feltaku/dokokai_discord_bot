@@ -27,7 +27,7 @@ def format_form_answers(answers):
     faculty = answer_map.get("学部を教えてください。", "")
     other_university_and_faculty = answer_map.get("大学名と学部を教えてください。", "")
     student_id = answer_map.get("学籍番号を教えてください。", "")
-    grade = (answer_map.get("学年を教えてください。(2026年度時点）", "")
+    grade = answer_map.get("学年を教えてください。(2026年度時点）", "")
 
     lines = []
 
