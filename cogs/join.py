@@ -27,6 +27,7 @@ def format_form_answers(answers):
     faculty = answer_map.get("学部を教えてください。", "")
     other_university_and_faculty = answer_map.get("大学名と学部を教えてください。", "")
     student_id = answer_map.get("学籍番号を教えてください。", "")
+    grade = (answer_map.get("学年を教えてください。(2026年度時点）", "")
 
     lines = []
 
@@ -58,17 +59,23 @@ def format_form_answers(answers):
     university_block = []
 
     if waseda_check == "はい":
+        university_line = "早稲田大学"
         if faculty:
-            university_block.append(f"早稲田大学　{faculty}")
-        else:
-            university_block.append("早稲田大学")
+            university_line += f"　{faculty}"
+        if grade:
+            university_line += f"　{grade}"
+        university_block.append(university_line)
 
         if student_id:
             university_block.append(student_id)
 
     elif waseda_check == "いいえ":
-        if other_university_and_faculty:
-            university_block.append(other_university_and_faculty)
+        university_line = other_university_and_faculty
+        if grade:
+            university_line += f"　{grade}"
+        if university_line:
+            university_block.append(university_line)
+
         if student_id:
             university_block.append(student_id)
 
