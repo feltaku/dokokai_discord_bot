@@ -742,33 +742,29 @@ def generation(data):
 
     config_font = lambda size: open_font_url(github_url("Assets", "ja-jp.ttf"), size)
 
-    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA", use_cache=False)
+    Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA")
 
     CharacterCostume = CharacterData.get('Costume')
     if CharacterName in ['蛍', '空']:
         CharacterImage = open_image_url(
             github_url("character", f"{CharacterName}({element})", "avatar.png"),
-            "RGBA",
-            use_cache=False
+            "RGBA"
         )
     else:
         if CharacterCostume:
             CharacterImage = open_image_url(
                 github_url("character", CharacterName, f"{CharacterCostume}.png"),
-                "RGBA",
-                use_cache=False
+                "RGBA"
             )
         else:
             CharacterImage = open_image_url(
                 github_url("character", CharacterName, "avatar.png"),
-                "RGBA",
-                use_cache=False
+                "RGBA"
             )
 
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
-        "RGBA",
-        use_cache=False
+        "RGBA"
     ).resize(Base.size)
 
     CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
@@ -796,8 +792,7 @@ def generation(data):
 
     WeaponImage = open_image_url(
         github_url("weapon", f"{WeaponName}.png"),
-        "RGBA",
-        use_cache=False
+        "RGBA"
     ).resize((128, 128))
     WeaponPaste = Image.new("RGBA", Base.size, (255, 255, 255, 0))
     WeaponMask = WeaponImage.copy()
@@ -825,8 +820,7 @@ def generation(data):
         TalentPaste = Image.new("RGBA", TalentBase.size, (255, 255, 255, 0))
         Talent = open_image_url(
             github_url("character", CharacterName, f"{t}.png"),
-            "RGBA",
-            use_cache=False
+            "RGBA"
         ).resize((50, 50))
         TalentMask = Talent.copy()
         TalentPaste.paste(Talent, (TalentPaste.width // 2 - 25, TalentPaste.height // 2 - 25), mask=TalentMask)
@@ -854,8 +848,7 @@ def generation(data):
         else:
             CharaC = open_image_url(
                 github_url("character", CharacterName, f"{c}.png"),
-                "RGBA",
-                use_cache=False
+                "RGBA"
             ).resize((45, 45))
             CharaCPaste = Image.new("RGBA", CBase.size, (255, 255, 255, 0))
             CharaCMask = CharaC.copy()
@@ -1036,8 +1029,7 @@ def generation(data):
         PreviewPaste = Image.new('RGBA', Base.size, (255, 255, 255, 0))
         Preview = open_image_url(
             github_url("Artifact", details["type"], f"{parts}.png"),
-            "RGBA",
-            use_cache=False
+            "RGBA"
         ).resize((256, 256))
         enhancer = ImageEnhance.Brightness(Preview)
         Preview = enhancer.enhance(0.6)
@@ -1177,7 +1169,6 @@ def generation(data):
 
     result = pil_to_bytes(Base, "PNG")
     Base.close()
-    clear_image_cache()
     return result
 
 
@@ -1529,7 +1520,6 @@ class UIDModal(discord.ui.Modal):
             )
             return
 
-#kokokara
         try:
             response = HTTP.get(f"https://enka.network/api/uid/{uid}", timeout=15)
             response.raise_for_status()
