@@ -454,7 +454,14 @@ def get_weapon_info(char, loc_data):
 
 def get_talent_levels(char, characters_data):
     avatar_id = str(char["avatarId"])
-    char_meta = characters_data.get(avatar_id, {})
+
+    # 旅人は avatarId-skillDepotId 形式で引く
+    if avatar_id in ("10000005", "10000007"):
+        skill_depot_id = char.get("skillDepotId")
+        traveler_key = f"{avatar_id}-{skill_depot_id}" if skill_depot_id is not None else avatar_id
+        char_meta = characters_data.get(traveler_key, characters_data.get(avatar_id, {}))
+    else:
+        char_meta = characters_data.get(avatar_id, {})
 
     skill_order = char_meta.get("SkillOrder", [])
     proud_map = char_meta.get("ProudMap", {})
@@ -504,10 +511,24 @@ def get_base_status_value(fight_prop_map: dict, key_name: str):
 
 def get_element_name_from_char(char, characters_data):
     avatar_id = str(char["avatarId"])
-    char_meta = characters_data.get(avatar_id, {})
 
-    # characters.json の Element を優先して使う
-    element_code = char_meta.get("Element")
+    # 旅人だけは skillDepotId を優先
+    if avatar_id in ("10000005", "10000007"):
+        depot_id = char.get("skillDepotId")
+
+        depot_map = {
+            701: "Wind",
+            702: "Fire",
+            703: "Electric",
+            704: "Grass",
+            705: "Water",
+            706: "Rock",
+        }
+
+        element_code = depot_map.get(depot_id)
+    else:
+        char_meta = characters_data.get(avatar_id, {})
+        element_code = char_meta.get("Element")
 
     element_map = {
         "Fire": "炎元素ダメージ",
@@ -533,7 +554,6 @@ def get_element_name_from_char(char, characters_data):
             best_name = jp_name
 
     return best_name
-
 
 def artifact_score_value_from_sub(sub_name: str, sub_value: float, score_mode: str):
     if sub_name == "会心率":
@@ -763,24 +783,27 @@ def generation(data):
 
     Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA")
 
-    CharacterCostume = CharacterData.get('Costume')
-    if CharacterName in ['蛍', '空']:
-        CharacterImage = open_image_url(
-            github_url("character", f"{CharacterName}({element})", "avatar.png"),
-            "RGBA"
-        )
-    else:
-        if CharacterCostume:
-            CharacterImage = open_image_url(
-                github_url("character", CharacterName, f"{CharacterCostume}.png"),
-                "RGBA"
-            )
-        else:
-            CharacterImage = open_image_url(
-                github_url("character", CharacterName, "avatar.png"),
-                "RGBA"
-            )
+        CharacterCostume = CharacterData.get('Costume')
 
+    # 天賦・命ノ星座用の参照先
+    if CharacterName in ['蛍', '空', '旅人']:
+        traveler_folder = f'蛍({element})' if CharacterName in ['蛍', '旅人'] else f'空({element})'
+        character_asset_folder = traveler_folder
+    else:
+        character_asset_folder = CharacterName
+
+    # 立ち絵
+        if CharacterName in ['蛍', '空', '旅人']:
+            if CharacterCostume:
+                CharacterImage = Image.open(f'{cwd}/character/旅人/{CharacterCostume}.png').convert("RGBA")
+            else:
+                CharacterImage = Image.open(f'{cwd}/character/{character_asset_folder}/avatar.png').convert("RGBA")
+        else:
+            if CharacterCostume:
+                CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/{CharacterCostume}.png').convert("RGBA")
+            else:
+                CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/avatar.png').convert("RGBA")
+                
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
         "RGBA"
@@ -837,9 +860,8 @@ def generation(data):
 
     for i, t in enumerate(['通常', 'スキル', "爆発"]):
         TalentPaste = Image.new("RGBA", TalentBase.size, (255, 255, 255, 0))
-        Talent = open_image_url(
-            github_url("character", CharacterName, f"{t}.png"),
-            "RGBA"
+        Talent = Image.open(
+            f'{cwd}/character/{character_asset_folder}/{t}.png').resize((50, 50)).convert('RGBA')
         ).resize((50, 50))
         TalentMask = Talent.copy()
         TalentPaste.paste(Talent, (TalentPaste.width // 2 - 25, TalentPaste.height // 2 - 25), mask=TalentMask)
@@ -865,10 +887,7 @@ def generation(data):
         if c > CharacterConstellations:
             CPaste.paste(Clock, (666, -10 + c * 93), mask=ClockMask)
         else:
-            CharaC = open_image_url(
-                github_url("character", CharacterName, f"{c}.png"),
-                "RGBA"
-            ).resize((45, 45))
+            CharaC = Image.open(f'{cwd}/character/{character_asset_folder}/{c}.png').convert("RGBA").resize((45, 45))
             CharaCPaste = Image.new("RGBA", CBase.size, (255, 255, 255, 0))
             CharaCMask = CharaC.copy()
             CharaCPaste.paste(CharaC, (int(CharaCPaste.width / 2) - 25, int(CharaCPaste.height / 2) - 23), mask=CharaCMask)
