@@ -795,14 +795,26 @@ def generation(data):
     # 立ち絵
     if CharacterName in ['蛍', '空', '旅人']:
         if CharacterCostume:
-            CharacterImage = Image.open(f'{cwd}/character/旅人/{CharacterCostume}.png').convert("RGBA")
+            CharacterImage = open_image_url(
+                github_url("character", "旅人", f"{CharacterCostume}.png"),
+                "RGBA"
+            )
         else:
-            CharacterImage = Image.open(f'{cwd}/character/{character_asset_folder}/avatar.png').convert("RGBA")
+            CharacterImage = open_image_url(
+                github_url("character", character_asset_folder, "avatar.png"),
+                "RGBA"
+            )
     else:
         if CharacterCostume:
-            CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/{CharacterCostume}.png').convert("RGBA")
+            CharacterImage = open_image_url(
+                github_url("character", CharacterName, f"{CharacterCostume}.png"),
+                "RGBA"
+            )
         else:
-            CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/avatar.png').convert("RGBA")
+            CharacterImage = open_image_url(
+                github_url("character", CharacterName, "avatar.png"),
+                "RGBA"
+            )
                 
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
@@ -860,7 +872,10 @@ def generation(data):
 
     for i, t in enumerate(['通常', 'スキル', "爆発"]):
         TalentPaste = Image.new("RGBA", TalentBase.size, (255, 255, 255, 0))
-        Talent = Image.open(f'{cwd}/character/{character_asset_folder}/{t}.png').resize((50, 50)).convert('RGBA')
+        Talent = open_image_url(
+                github_url("character", character_asset_folder, f"{t}.png"),
+                "RGBA"
+            ).resize((50, 50)).convert('RGBA')
         TalentMask = Talent.copy()
         TalentPaste.paste(Talent, (TalentPaste.width // 2 - 25, TalentPaste.height // 2 - 25), mask=TalentMask)
 
@@ -885,7 +900,10 @@ def generation(data):
         if c > CharacterConstellations:
             CPaste.paste(Clock, (666, -10 + c * 93), mask=ClockMask)
         else:
-            CharaC = Image.open(f'{cwd}/character/{character_asset_folder}/{c}.png').convert("RGBA").resize((45, 45))
+            CharaC = open_image_url(
+                    github_url("character", character_asset_folder, f"{c}.png"),
+                    "RGBA"
+                ).resize((45, 45))
             CharaCPaste = Image.new("RGBA", CBase.size, (255, 255, 255, 0))
             CharaCMask = CharaC.copy()
             CharaCPaste.paste(CharaC, (int(CharaCPaste.width / 2) - 25, int(CharaCPaste.height / 2) - 23), mask=CharaCMask)
