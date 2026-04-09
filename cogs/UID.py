@@ -783,7 +783,7 @@ def generation(data):
 
     Base = open_image_url(github_url("Base", f"{element}.png"), "RGBA")
 
-        CharacterCostume = CharacterData.get('Costume')
+    CharacterCostume = CharacterData.get('Costume')
 
     # 天賦・命ノ星座用の参照先
     if CharacterName in ['蛍', '空', '旅人']:
@@ -793,16 +793,16 @@ def generation(data):
         character_asset_folder = CharacterName
 
     # 立ち絵
-        if CharacterName in ['蛍', '空', '旅人']:
-            if CharacterCostume:
-                CharacterImage = Image.open(f'{cwd}/character/旅人/{CharacterCostume}.png').convert("RGBA")
-            else:
-                CharacterImage = Image.open(f'{cwd}/character/{character_asset_folder}/avatar.png').convert("RGBA")
+    if CharacterName in ['蛍', '空', '旅人']:
+        if CharacterCostume:
+            CharacterImage = Image.open(f'{cwd}/character/旅人/{CharacterCostume}.png').convert("RGBA")
         else:
-            if CharacterCostume:
-                CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/{CharacterCostume}.png').convert("RGBA")
-            else:
-                CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/avatar.png').convert("RGBA")
+            CharacterImage = Image.open(f'{cwd}/character/{character_asset_folder}/avatar.png').convert("RGBA")
+    else:
+        if CharacterCostume:
+            CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/{CharacterCostume}.png').convert("RGBA")
+        else:
+            CharacterImage = Image.open(f'{cwd}/character/{CharacterName}/avatar.png').convert("RGBA")
                 
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
