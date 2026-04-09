@@ -860,9 +860,7 @@ def generation(data):
 
     for i, t in enumerate(['通常', 'スキル', "爆発"]):
         TalentPaste = Image.new("RGBA", TalentBase.size, (255, 255, 255, 0))
-        Talent = Image.open(
-            f'{cwd}/character/{character_asset_folder}/{t}.png').resize((50, 50)).convert('RGBA')
-        ).resize((50, 50))
+        Talent = Image.open(f'{cwd}/character/{character_asset_folder}/{t}.png').resize((50, 50)).convert('RGBA')
         TalentMask = Talent.copy()
         TalentPaste.paste(Talent, (TalentPaste.width // 2 - 25, TalentPaste.height // 2 - 25), mask=TalentMask)
 
