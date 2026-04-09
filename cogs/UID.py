@@ -330,27 +330,46 @@ def get_localized_text(loc_data: dict, text_hash, lang="ja"):
     if text_hash is None:
         return None
 
-    text_hash = str(text_hash)
+    base_hash = str(text_hash)
 
-    if lang in loc_data and isinstance(loc_data[lang], dict):
-        v = loc_data[lang].get(text_hash)
+    def lookup_one(hash_str: str):
+        if lang in loc_data and isinstance(loc_data[lang], dict):
+            v = loc_data[lang].get(hash_str)
+            if v:
+                return v
+
+        for alt_lang in ("jp", "ja-jp", "ja_JP", "Japanese"):
+            if alt_lang in loc_data and isinstance(loc_data[alt_lang], dict):
+                v = loc_data[alt_lang].get(hash_str)
+                if v:
+                    return v
+
+        if hash_str in loc_data and isinstance(loc_data[hash_str], dict):
+            for key in (lang, "jp", "ja-jp", "ja_JP", "Japanese"):
+                v = loc_data[hash_str].get(key)
+                if v:
+                    return v
+
+        return None
+
+    v = lookup_one(base_hash)
+    if v:
+        return v
+
+    # v6.5 以降のハッシュずれ対策
+    # 旧 loc.json しかない環境向けに ±512 を試す
+    try:
+        n = int(base_hash)
+    except (TypeError, ValueError):
+        return None
+
+    for diff in (-512, 512):
+        shifted = str(n + diff)
+        v = lookup_one(shifted)
         if v:
             return v
 
-    for alt_lang in ("jp", "ja-jp", "ja_JP", "Japanese"):
-        if alt_lang in loc_data and isinstance(loc_data[alt_lang], dict):
-            v = loc_data[alt_lang].get(text_hash)
-            if v:
-                return v
-
-    if text_hash in loc_data and isinstance(loc_data[text_hash], dict):
-        for key in (lang, "jp", "ja-jp", "ja_JP", "Japanese"):
-            v = loc_data[text_hash].get(key)
-            if v:
-                return v
-
     return None
-
 
 def get_character_name(char, characters_data, loc_data):
     avatar_id = str(char["avatarId"])
