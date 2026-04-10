@@ -1,8 +1,10 @@
 import base64
 import itertools
 import json
+import time
 from collections import Counter
 from io import BytesIO
+from pathlib import Path
 
 import discord
 import requests
@@ -14,17 +16,16 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # ====パス設定====
 
-GITHUB_BASE = "https://raw.githubusercontent.com/feltaku/dokokai_discord_bot/main"
-IMAGE_BASE = f"{GITHUB_BASE}/image"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+IMAGE_BASE = PROJECT_ROOT / "image"
 
-CHARACTERS_JSON_URL = f"{GITHUB_BASE}/characters.json"
-LOC_JSON_URL = f"{GITHUB_BASE}/loc.json"
+CHARACTERS_JSON_URL = PROJECT_ROOT / "characters.json"
+LOC_JSON_URL = PROJECT_ROOT / "loc.json"
 
 HTTP = requests.Session()
 _JSON_CACHE = {}
 _IMAGE_CACHE = {}
 _FONT_CACHE = {}
-
 
 # ====マッピング====
 
@@ -127,46 +128,40 @@ def clear_image_cache():
 
 # ====JSON 読み込み====
 
-def load_json(url: str):
-    if url in _JSON_CACHE:
-        return _JSON_CACHE[url]
+def load_json(path):
+    cache_key = str(path)
+    if cache_key in _JSON_CACHE:
+        return _JSON_CACHE[cache_key]
 
-    response = HTTP.get(url, timeout=20)
-    response.raise_for_status()
-    data = response.json()
-    _JSON_CACHE[url] = data
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    _JSON_CACHE[cache_key] = data
     return data
 
-
 def github_url(*parts: str):
-    encoded = [requests.utils.quote(str(p)) for p in parts]
-    return f"{IMAGE_BASE}/" + "/".join(encoded)
-
+    path = IMAGE_BASE
+    for p in parts:
+        path = path / str(p)
+    return path
 
 def open_image_url(
-    url: str,
+    path,
     convert_mode: str | None = None,
     *,
     use_cache: bool = True,
     cache_max_pixels: int = 300_000
 ):
-    cache_key = (url, convert_mode)
+    cache_key = (str(path), convert_mode)
 
     if use_cache and cache_key in _IMAGE_CACHE:
         return _IMAGE_CACHE[cache_key].copy()
 
-    response = HTTP.get(url, timeout=20)
-    response.raise_for_status()
-
-    image_bytes = BytesIO(response.content)
-    try:
-        with Image.open(image_bytes) as im:
-            if convert_mode:
-                img = im.convert(convert_mode)
-            else:
-                img = im.copy()
-    finally:
-        image_bytes.close()
+    with Image.open(path) as im:
+        if convert_mode:
+            img = im.convert(convert_mode)
+        else:
+            img = im.copy()
 
     if use_cache and (img.width * img.height) <= cache_max_pixels:
         _IMAGE_CACHE[cache_key] = img.copy()
@@ -174,19 +169,15 @@ def open_image_url(
     return img
 
 
-def open_font_url(url: str, size: int):
-    cache_key = (url, size)
+def open_font_url(path, size: int):
+    cache_key = (str(path), size)
 
     if cache_key in _FONT_CACHE:
         return _FONT_CACHE[cache_key]
 
-    response = HTTP.get(url, timeout=20)
-    response.raise_for_status()
-
-    font = ImageFont.truetype(BytesIO(response.content), size)
+    font = ImageFont.truetype(str(path), size)
     _FONT_CACHE[cache_key] = font
     return font
-
 
 def culculate_op(data: dict):
     dup = load_json(github_url("Assets", "duplicate.json"))
@@ -1558,27 +1549,42 @@ class UIDModal(discord.ui.Modal):
         self.add_item(self.uid_input)
 
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
         uid = self.uid_input.value.strip()
-
+        
         if not uid.isdigit():
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "UIDは数字のみで入力してください。",
-                ephemeral=True
+                 ephemeral=True
             )
             return
 
         if len(uid) not in (9, 10):
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "UIDは9桁または10桁で入力してください。",
                 ephemeral=True
             )
             return
 
         try:
-            response = HTTP.get(f"https://enka.network/api/uid/{uid}", timeout=15)
-            response.raise_for_status()
-            data = response.json()
+            now = time.time()
+            cache = self.cog.uid_cache.get(uid)
 
+            if cache and now - cache["time"] < 60:
+                data = cache["data"]
+            else:
+                response = HTTP.get(f"https://enka.network/api/uid/{uid}", timeout=20)
+
+                if response.status_code == 429:
+                    await interaction.followup.send(
+                        "Enka APIのアクセス制限にかかっています。少し時間を空けてからもう一度試してください。",
+                        ephemeral=True
+                    )
+                    return
+
+                response.raise_for_status()
+                data = response.json()
+                self.cog.uid_cache[uid] = {"time": now, "data": data}
             # データ存在チェック（UID非公開など対策）
             if not data or "avatarInfoList" not in data:
                 await interaction.response.send_message(
@@ -1588,35 +1594,35 @@ class UIDModal(discord.ui.Modal):
                 return
 
         except requests.Timeout:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Enka APIがタイムアウトしました。しばらく待って再度お試しください。",
                 ephemeral=True
             )
             return
 
         except requests.HTTPError as e:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"Enka APIでエラーが発生しました。\nHTTP {response.status_code}",
                 ephemeral=True
             )
             return
 
         except requests.RequestException:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Enka APIへの接続に失敗しました。",
                 ephemeral=True
             )
             return
 
         except ValueError:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "APIレスポンスの解析に失敗しました。",
                 ephemeral=True
             )
             return
 
         if "avatarInfoList" not in data:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "キャラ取得失敗。UIDが正しいか、公開設定になっているか確認してください。",
                 ephemeral=True
             )
@@ -1624,7 +1630,7 @@ class UIDModal(discord.ui.Modal):
 
         characters = data["avatarInfoList"]
         if not characters:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "公開キャラクターが見つかりませんでした。",
                 ephemeral=True
             )
@@ -1647,7 +1653,7 @@ class UIDModal(discord.ui.Modal):
             uid=uid
         )
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             content="プロフィールを表示中です。",
             embed=profile_embed,
             view=view,
@@ -1675,6 +1681,7 @@ class GenshinCog(commands.Cog):
         self.bot = bot
         self.characters_data = load_json(CHARACTERS_JSON_URL)
         self.loc_data = load_json(LOC_JSON_URL)
+        self.uid_cache = {}
 
     @commands.slash_command(name="genshin_build", description="原神プロフィール表示ボタンを送信")
     async def genshin_build(self, ctx):
@@ -1702,7 +1709,6 @@ class GenshinCog(commands.Cog):
             embed=embed,
             view=view
         )
-#kokomade
 
 def setup(bot):
     bot.add_cog(GenshinCog(bot))
