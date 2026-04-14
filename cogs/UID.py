@@ -21,6 +21,16 @@ IMAGE_BASE = PROJECT_ROOT / "image"
 
 CHARACTERS_JSON_URL = PROJECT_ROOT / "characters.json"
 LOC_JSON_URL = PROJECT_ROOT / "loc.json"
+NAMECARD_MAP_JSON = PROJECT_ROOT / "namecard_map.json"
+
+STYGIAN_DIFFICULTY_MAP = {
+    1: "easy",
+    2: "normal",
+    3: "hard",
+    4: "master",
+    5: "extra",
+    6: "ultimate",
+}
 
 HTTP = requests.Session()
 _JSON_CACHE = {}
@@ -381,6 +391,34 @@ def get_profile_icon_url(player_info, characters_data):
         return None
 
     return f"https://enka.network/ui/{side_icon_name}.png"
+
+
+def get_namecard_banner_url(player_info, namecard_map):
+    name_card_id = player_info.get("nameCardId")
+    if not name_card_id:
+        return None
+
+    return namecard_map.get(str(name_card_id))
+
+
+def get_guild_emoji_text(guild, emoji_name: str) -> str:
+    if guild is None:
+        return ""
+
+    emoji = discord.utils.get(guild.emojis, name=emoji_name)
+    return str(emoji) if emoji else ""
+
+
+def get_stygian_emoji_text(guild, difficulty: str | None, seconds: int | None) -> str:
+    if difficulty == "ultimate" and seconds is not None and seconds <= 180:
+        special_emoji = get_guild_emoji_text(guild, "yabaine")
+        if special_emoji:
+            return special_emoji
+
+    if not difficulty:
+        return ""
+
+    return get_guild_emoji_text(guild, difficulty)
 
 
 def get_weapon_info(char, loc_data):
@@ -1219,7 +1257,7 @@ def generation(data):
 
 # ====Embed====
 
-def build_profile_embed(data, characters, characters_data, loc_data, uid):
+def build_profile_embed(data, characters, characters_data, loc_data, uid, namecard_map=None, guild=None):
     player_info = data.get("playerInfo", {})
 
     nickname = player_info.get("nickname", "不明")
@@ -1227,57 +1265,69 @@ def build_profile_embed(data, characters, characters_data, loc_data, uid):
     adventure_rank = player_info.get("level", "不明")
     world_level = player_info.get("worldLevel", "不明")
     achievement_count = player_info.get("finishAchievementNum", "不明")
+
     tower_floor = player_info.get("towerFloorIndex", 0)
     tower_room = player_info.get("towerLevelIndex", 0)
-    name_card_id = player_info.get("nameCardId", "不明")
-
-    public_char_count = len(characters)
-
-    chara_lines = []
-    for char in characters[:9]:
-        name = get_character_name(char, characters_data, loc_data)
-        level = char.get("propMap", {}).get("4001", {}).get("val", "不明")
-        chara_lines.append(f"・{name} Lv.{level}")
-
-    if not chara_lines:
-        chara_lines.append("公開キャラクターなし")
 
     abyss_text = "未記録"
     if tower_floor and tower_room:
-        abyss_text = f"{tower_floor}-{tower_room}"
+        abyss_text = f"{tower_floor}層 {tower_room}間"
+
+    theater_text = "未記録"
+
+    stygian_index = player_info.get("stygianIndex", 0)
+    stygian_seconds = player_info.get("stygianSeconds")
+
+    difficulty = STYGIAN_DIFFICULTY_MAP.get(stygian_index)
+    stygian_emoji = get_stygian_emoji_text(guild, difficulty, stygian_seconds)
+
+    stygian_text = "未記録"
+    if stygian_index:
+        if stygian_seconds is not None:
+            stygian_text = f"{stygian_seconds}s {stygian_emoji}".strip()
+        else:
+            stygian_text = f"記録あり {stygian_emoji}".strip()
 
     embed = discord.Embed(
-        title=f"{nickname} のプロフィール",
-        description=f"UID: {uid}"
+        title=nickname,
+        description=signature if signature else "署名なし"
     )
 
     embed.add_field(
-        name="基本情報",
-        value=(
-            f"冒険ランク: {adventure_rank}\n"
-            f"世界ランク: {world_level}\n"
-            f"実績数: {achievement_count}\n"
-            f"深境螺旋: {abyss_text}\n"
-            f"公開キャラ数: {public_char_count}"
-        ),
+        name="深境螺旋",
+        value=abyss_text,
+        inline=True
+    )
+    embed.add_field(
+        name="幻想シアター",
+        value=theater_text,
+        inline=True
+    )
+    embed.add_field(
+        name="幽境の激戦",
+        value=stygian_text,
+        inline=True
+    )
+
+    embed.add_field(
+        name="アチーブメント",
+        value=str(achievement_count),
         inline=False
     )
 
     embed.add_field(
-        name="コメント",
-        value=signature if signature else "なし",
-        inline=False
-    )
-
-    embed.add_field(
-        name="公開キャラクター",
-        value="\n".join(chara_lines),
+        name="",
+        value=f"冒険ランク{adventure_rank}・世界ランク{world_level}",
         inline=False
     )
 
     profile_icon_url = get_profile_icon_url(player_info, characters_data)
     if profile_icon_url:
         embed.set_thumbnail(url=profile_icon_url)
+
+    namecard_banner_url = get_namecard_banner_url(player_info, namecard_map or {})
+    if namecard_banner_url:
+        embed.set_image(url=namecard_banner_url)
 
     embed.set_footer(text="キャラクター選択後に画像生成ボタンを押すとビルドカードを作成します")
     return embed
@@ -1333,7 +1383,9 @@ class CharacterSelect(discord.ui.Select):
                 characters=self.parent_view.characters,
                 characters_data=self.parent_view.characters_data,
                 loc_data=self.parent_view.loc_data,
-                uid=self.parent_view.uid
+                uid=self.parent_view.uid,
+                namecard_map=self.parent_view.namecard_map,
+                guild=interaction.guild
             )
 
             await interaction.response.edit_message(
@@ -1393,7 +1445,9 @@ class ScoreModeButton(discord.ui.Button):
                 characters=self.parent_view.characters,
                 characters_data=self.parent_view.characters_data,
                 loc_data=self.parent_view.loc_data,
-                uid=self.parent_view.uid
+                uid=self.parent_view.uid,
+                namecard_map=self.parent_view.namecard_map,
+                guild=interaction.guild
             )
             await interaction.response.edit_message(
                 content="プロフィールを表示中です。",
@@ -1468,7 +1522,7 @@ class GenerateImageButton(discord.ui.Button):
 
 
 class CharacterSelectView(discord.ui.View):
-    def __init__(self, author_id, uid, data, characters, characters_data, loc_data):
+    def __init__(self, author_id, uid, data, characters, characters_data, loc_data, namecard_map=None):
         super().__init__(timeout=600)
         self.author_id = author_id
         self.uid = uid
@@ -1476,6 +1530,7 @@ class CharacterSelectView(discord.ui.View):
         self.characters = characters
         self.characters_data = characters_data
         self.loc_data = loc_data
+        self.namecard_map = namecard_map or {}
 
         self.current_page = "profile"
         self.current_character_index = None
@@ -1587,7 +1642,7 @@ class UIDModal(discord.ui.Modal):
                 self.cog.uid_cache[uid] = {"time": now, "data": data}
             # データ存在チェック（UID非公開など対策）
             if not data or "avatarInfoList" not in data:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "キャラクターデータが取得できませんでした（UID非公開の可能性があります）。",
                     ephemeral=True
                 )
@@ -1642,7 +1697,8 @@ class UIDModal(discord.ui.Modal):
             data=data,
             characters=characters,
             characters_data=self.cog.characters_data,
-            loc_data=self.cog.loc_data
+            loc_data=self.cog.loc_data,
+            namecard_map=self.cog.namecard_map
         )
 
         profile_embed = build_profile_embed(
@@ -1650,7 +1706,9 @@ class UIDModal(discord.ui.Modal):
             characters=characters,
             characters_data=self.cog.characters_data,
             loc_data=self.cog.loc_data,
-            uid=uid
+            uid=uid,
+            namecard_map=self.cog.namecard_map,
+            guild=interaction.guild
         )
 
         await interaction.followup.send(
@@ -1681,6 +1739,7 @@ class GenshinCog(commands.Cog):
         self.bot = bot
         self.characters_data = load_json(CHARACTERS_JSON_URL)
         self.loc_data = load_json(LOC_JSON_URL)
+        self.namecard_map = load_json(NAMECARD_MAP_JSON)
         self.uid_cache = {}
 
     @commands.slash_command(name="genshin_build", description="原神プロフィール表示ボタンを送信")
