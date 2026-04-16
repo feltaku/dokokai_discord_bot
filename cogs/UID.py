@@ -1273,24 +1273,35 @@ def build_profile_embed(data, characters, characters_data, loc_data, uid, nameca
     if tower_floor and tower_room:
         abyss_text = f"{tower_floor}層 {tower_room}間"
 
+    theater_act = player_info.get("theaterActIndex", 0)
+    theater_star = player_info.get("theaterStarIndex", 0)
+
     theater_text = "未記録"
+    if theater_act or theater_star:
+        act_text = f"第{theater_act}幕" if theater_act else ""
+        star_text = f"{theater_star}" if theater_star else ""
+
+        if act_text and star_text:
+            theater_text = f"{act_text} | {star_text}"
+        else:
+            theater_text = act_text or star_text
 
     stygian_index = player_info.get("stygianIndex", 0)
     stygian_seconds = player_info.get("stygianSeconds")
-
+    
     difficulty = STYGIAN_DIFFICULTY_MAP.get(stygian_index)
     stygian_emoji = get_stygian_emoji_text(guild, difficulty, stygian_seconds)
 
     stygian_text = "未記録"
     if stygian_index:
         if stygian_seconds is not None:
-            stygian_text = f"{stygian_seconds}s {stygian_emoji}".strip()
+            stygian_text = f"{stygian_seconds}s | {stygian_emoji}".strip()
         else:
             stygian_text = f"記録あり {stygian_emoji}".strip()
 
     embed = discord.Embed(
         title=nickname,
-        description=signature if signature else "署名なし"
+        description=signature if signature else "コメントなし"
     )
 
     embed.add_field(
