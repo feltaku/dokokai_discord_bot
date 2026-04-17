@@ -21,7 +21,7 @@ IMAGE_BASE = PROJECT_ROOT / "image"
 
 CHARACTERS_JSON_URL = PROJECT_ROOT / "characters.json"
 LOC_JSON_URL = PROJECT_ROOT / "loc.json"
-NAMECARD_MAP_JSON = PROJECT_ROOT / "namecard_map.json"
+NAMECARD_DIR = IMAGE_BASE / "namecard"
 
 STYGIAN_DIFFICULTY_MAP = {
     1: "easy",
@@ -393,12 +393,16 @@ def get_profile_icon_url(player_info, characters_data):
     return f"https://enka.network/ui/{side_icon_name}.png"
 
 
-def get_namecard_banner_url(player_info, namecard_map):
+def get_namecard_path(player_info):
     name_card_id = player_info.get("nameCardId")
     if not name_card_id:
         return None
 
-    return namecard_map.get(str(name_card_id))
+    path = github_url("namecard", f"{name_card_id}.png")
+    if path.exists():
+        return path
+
+    return None
 
 
 def get_guild_emoji_text(guild, emoji_name: str) -> str:
@@ -1257,7 +1261,7 @@ def generation(data):
 
 # ====Embed====
 
-def build_profile_embed(data, characters, characters_data, loc_data, uid, namecard_map=None, guild=None):
+def build_profile_embed(data, characters, characters_data, loc_data, uid, guild=None):
     player_info = data.get("playerInfo", {})
 
     nickname = player_info.get("nickname", "不明")
@@ -1336,12 +1340,14 @@ def build_profile_embed(data, characters, characters_data, loc_data, uid, nameca
     if profile_icon_url:
         embed.set_thumbnail(url=profile_icon_url)
 
-    namecard_banner_url = get_namecard_banner_url(player_info, namecard_map or {})
-    if namecard_banner_url:
-        embed.set_image(url=namecard_banner_url)
+    namecard_file = None
+    namecard_path = get_namecard_path(player_info)
+    if namecard_path:
+        namecard_file = discord.File(namecard_path, filename="namecard.png")
+        embed.set_image(url="attachment://namecard.png")
 
     embed.set_footer(text="キャラクター選択後に画像生成ボタンを押すとビルドカードを作成します")
-    return embed
+    return embed, namecard_file
 
 
 def build_selected_character_embed(data, char, characters_data, loc_data, score_mode):
@@ -1389,21 +1395,29 @@ class CharacterSelect(discord.ui.Select):
             self.parent_view.current_page = "profile"
             self.parent_view.current_character_index = None
 
-            embed = build_profile_embed(
+            embed, namecard_file = build_profile_embed(
                 data=self.parent_view.data,
                 characters=self.parent_view.characters,
                 characters_data=self.parent_view.characters_data,
                 loc_data=self.parent_view.loc_data,
                 uid=self.parent_view.uid,
-                namecard_map=self.parent_view.namecard_map,
                 guild=interaction.guild
             )
 
-            await interaction.response.edit_message(
-                content="プロフィールを表示中です。",
-                embed=embed,
-                view=self.parent_view
-            )
+            if namecard_file:
+                await interaction.response.edit_message(
+                    content="プロフィールを表示中です。",
+                    embed=embed,
+                    attachments=[namecard_file],
+                    view=self.parent_view
+                )
+            else:
+                await interaction.response.edit_message(
+                    content="プロフィールを表示中です。",
+                    embed=embed,
+                    attachments=[],
+                    view=self.parent_view
+                )
             return
 
         selected_index = int(selected_value)
@@ -1451,20 +1465,28 @@ class ScoreModeButton(discord.ui.Button):
                 view=self.parent_view
             )
         else:
-            embed = build_profile_embed(
+            embed, namecard_file = build_profile_embed(
                 data=self.parent_view.data,
                 characters=self.parent_view.characters,
                 characters_data=self.parent_view.characters_data,
                 loc_data=self.parent_view.loc_data,
                 uid=self.parent_view.uid,
-                namecard_map=self.parent_view.namecard_map,
                 guild=interaction.guild
             )
-            await interaction.response.edit_message(
-                content="プロフィールを表示中です。",
-                embed=embed,
-                view=self.parent_view
-            )
+            if namecard_file:
+                await interaction.response.edit_message(
+                    content="プロフィールを表示中です。",
+                    embed=embed,
+                    attachments=[namecard_file],
+                    view=self.parent_view
+                )
+            else:
+                await interaction.response.edit_message(
+                    content="プロフィールを表示中です。",
+                    embed=embed,
+                    attachments=[],
+                    view=self.parent_view
+                )
 
 
 class GenerateImageButton(discord.ui.Button):
@@ -1533,7 +1555,7 @@ class GenerateImageButton(discord.ui.Button):
 
 
 class CharacterSelectView(discord.ui.View):
-    def __init__(self, author_id, uid, data, characters, characters_data, loc_data, namecard_map=None):
+    def __init__(self, author_id, uid, data, characters, characters_data, loc_data):
         super().__init__(timeout=600)
         self.author_id = author_id
         self.uid = uid
@@ -1541,8 +1563,6 @@ class CharacterSelectView(discord.ui.View):
         self.characters = characters
         self.characters_data = characters_data
         self.loc_data = loc_data
-        self.namecard_map = namecard_map or {}
-
         self.current_page = "profile"
         self.current_character_index = None
         self.score_mode = "atk"
@@ -1708,26 +1728,34 @@ class UIDModal(discord.ui.Modal):
             data=data,
             characters=characters,
             characters_data=self.cog.characters_data,
-            loc_data=self.cog.loc_data,
-            namecard_map=self.cog.namecard_map
+            loc_data=self.cog.loc_data
         )
 
-        profile_embed = build_profile_embed(
+
+        profile_embed, namecard_file = build_profile_embed(
             data=data,
             characters=characters,
             characters_data=self.cog.characters_data,
             loc_data=self.cog.loc_data,
             uid=uid,
-            namecard_map=self.cog.namecard_map,
             guild=interaction.guild
         )
 
-        await interaction.followup.send(
-            content="プロフィールを表示中です。",
-            embed=profile_embed,
-            view=view,
-            ephemeral=True
-        )
+        if namecard_file:
+            await interaction.followup.send(
+                content="プロフィールを表示中です。",
+                embed=profile_embed,
+                file=namecard_file,
+                view=view,
+                ephemeral=True
+            )
+        else:
+            await interaction.followup.send(
+                content="プロフィールを表示中です。",
+                embed=profile_embed,
+                view=view,
+                ephemeral=True
+            )
 
 
 class UIDInputButton(discord.ui.Button):
@@ -1750,7 +1778,6 @@ class GenshinCog(commands.Cog):
         self.bot = bot
         self.characters_data = load_json(CHARACTERS_JSON_URL)
         self.loc_data = load_json(LOC_JSON_URL)
-        self.namecard_map = load_json(NAMECARD_MAP_JSON)
         self.uid_cache = {}
 
     @commands.slash_command(name="genshin_build", description="原神プロフィール表示ボタンを送信")
