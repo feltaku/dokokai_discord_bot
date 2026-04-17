@@ -133,6 +133,47 @@ SCORE_MODE_LABELS = {
     "em": "元素熟知",
 }
 
+
+ALLOWED_CUSTOM_SPLASH_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+MAX_CUSTOM_SPLASH_BYTES = 10 * 1024 * 1024
+CUSTOM_SPLASH_SIZE = (1079, 768)
+
+
+def attachment_is_supported_image(attachment: discord.Attachment) -> bool:
+    suffix = Path(attachment.filename or "").suffix.lower()
+    if suffix in ALLOWED_CUSTOM_SPLASH_EXTENSIONS:
+        return True
+
+    content_type = (attachment.content_type or "").lower()
+    return content_type.startswith("image/")
+
+
+def prepare_custom_splash_image(image_bytes: bytes) -> Image.Image:
+    with Image.open(BytesIO(image_bytes)) as im:
+        img = ImageOps.exif_transpose(im).convert("RGBA")
+
+    return ImageOps.fit(
+        img,
+        CUSTOM_SPLASH_SIZE,
+        method=Image.Resampling.LANCZOS,
+        centering=(0.5, 0.5)
+    )
+
+
+def get_custom_splash_state_text(view, character_index):
+    if character_index is None:
+        return "未設定"
+
+    has_image = character_index in view.custom_splash_map
+    enabled = view.custom_splash_enabled.get(character_index, False)
+
+    if has_image and enabled:
+        return "設定済み・使用中"
+    if has_image:
+        return "設定済み・現在OFF"
+    return "未設定"
+
+
 def clear_image_cache():
     _IMAGE_CACHE.clear()
 
@@ -784,7 +825,7 @@ def build_generation_data(raw_data, char, characters_data, loc_data, score_mode:
 
 # ====描画====
 
-def generation(data):
+def generation(data, custom_splash_bytes: bytes | None = None):
     element = data.get('元素')
 
     CharacterData: dict = data.get('Character')
@@ -826,36 +867,42 @@ def generation(data):
         character_asset_folder = CharacterName
 
     # 立ち絵
-    if CharacterName in ['蛍', '空', '旅人']:
-        if CharacterCostume:
-            CharacterImage = open_image_url(
-                github_url("character", "旅人", f"{CharacterCostume}.png"),
-                "RGBA"
-            )
-        else:
-            CharacterImage = open_image_url(
-                github_url("character", character_asset_folder, "avatar.png"),
-                "RGBA"
-            )
+    if custom_splash_bytes is not None:
+        CharacterImage = prepare_custom_splash_image(custom_splash_bytes)
     else:
-        if CharacterCostume:
-            CharacterImage = open_image_url(
-                github_url("character", CharacterName, f"{CharacterCostume}.png"),
-                "RGBA"
-            )
+        if CharacterName in ['蛍', '空', '旅人']:
+            if CharacterCostume:
+                CharacterImage = open_image_url(
+                    github_url("character", "旅人", f"{CharacterCostume}.png"),
+                    "RGBA"
+                )
+            else:
+                CharacterImage = open_image_url(
+                    github_url("character", character_asset_folder, "avatar.png"),
+                    "RGBA"
+                )
         else:
-            CharacterImage = open_image_url(
-                github_url("character", CharacterName, "avatar.png"),
-                "RGBA"
-            )
-                
+            if CharacterCostume:
+                CharacterImage = open_image_url(
+                    github_url("character", CharacterName, f"{CharacterCostume}.png"),
+                    "RGBA"
+                )
+            else:
+                CharacterImage = open_image_url(
+                    github_url("character", CharacterName, "avatar.png"),
+                    "RGBA"
+                )
+
+        CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
+        CharacterImage = CharacterImage.resize(
+            (int(CharacterImage.width * 0.75), int(CharacterImage.height * 0.75))
+        )
+
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
         "RGBA"
     ).resize(Base.size)
 
-    CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
-    CharacterImage = CharacterImage.resize((int(CharacterImage.width * 0.75), int(CharacterImage.height * 0.75)))
 
     CharacterAvatarMask = CharacterImage.copy()
 
@@ -1350,7 +1397,14 @@ def build_profile_embed(data, characters, characters_data, loc_data, uid, guild=
     return embed, namecard_file
 
 
-def build_selected_character_embed(data, char, characters_data, loc_data, score_mode):
+def build_selected_character_embed(
+    data,
+    char,
+    characters_data,
+    loc_data,
+    score_mode,
+    custom_splash_state="未設定"
+):
     player_info = data.get("playerInfo", {})
     nickname = player_info.get("nickname", "不明")
     ar = player_info.get("level", "不明")
@@ -1368,14 +1422,120 @@ def build_selected_character_embed(data, char, characters_data, loc_data, score_
             f"{nickname} / AR{ar} / WL{wl}\n"
             f"Lv.{level} / {constellations}凸\n"
             f"天賦: {talents['通常']}/{talents['スキル']}/{talents['爆発']}\n"
-            f"スコア方式: {score_label}"
+            f"スコア方式: {score_label}\n"
+            f"差し替え画像: {custom_splash_state}"
         )
     )
-    embed.set_footer(text="画像生成ボタンを押すとビルドカードを表示します")
+    embed.set_footer(text="画像変更後に画像生成ボタンを押すとビルドカードを表示します")
     return embed
 
 
 # ====UI====
+
+
+class CustomSplashUploadModal(discord.ui.DesignerModal):
+    def __init__(self, view):
+        self.parent_view = view
+        self.file_upload = discord.ui.FileUpload(
+            custom_id="custom_splash_upload",
+            min_values=1,
+            max_values=1,
+            required=True
+        )
+
+        file_label = discord.ui.Label(
+            "差し替え画像",
+            self.file_upload,
+            description="PNG / JPG / JPEG / WEBP を1枚アップロードしてください"
+        )
+
+        super().__init__(
+            file_label,
+            title="スプラッシュ画像を設定"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.parent_view.current_page != "character" or self.parent_view.current_character_index is None:
+            await interaction.response.send_message(
+                "先にキャラクターを選択してください。",
+                ephemeral=True
+            )
+            return
+
+        attachments = self.file_upload.values or []
+        if not attachments:
+            await interaction.response.send_message(
+                "画像が選択されていません。",
+                ephemeral=True
+            )
+            return
+
+        attachment = attachments[0]
+
+        if not attachment_is_supported_image(attachment):
+            await interaction.response.send_message(
+                "PNG / JPG / JPEG / WEBP の画像を使用してください。",
+                ephemeral=True
+            )
+            return
+
+        if attachment.size and attachment.size > MAX_CUSTOM_SPLASH_BYTES:
+            await interaction.response.send_message(
+                "画像サイズが大きすぎます。10MB以下の画像を使用してください。",
+                ephemeral=True
+            )
+            return
+
+        try:
+            image_bytes = await attachment.read()
+            prepare_custom_splash_image(image_bytes)
+        except Exception as e:
+            await interaction.response.send_message(
+                f"画像の読み込みに失敗しました。\n{type(e).__name__}: {e}",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        index = self.parent_view.current_character_index
+        self.parent_view.custom_splash_map[index] = image_bytes
+        self.parent_view.custom_splash_enabled[index] = True
+        self.parent_view.refresh_custom_splash_button()
+
+        selected_char = self.parent_view.characters[index]
+        embed = build_selected_character_embed(
+            data=self.parent_view.data,
+            char=selected_char,
+            characters_data=self.parent_view.characters_data,
+            loc_data=self.parent_view.loc_data,
+            score_mode=self.parent_view.score_mode,
+            custom_splash_state=get_custom_splash_state_text(
+                self.parent_view,
+                index
+            )
+        )
+
+        try:
+            if self.parent_view.last_message_interaction is not None:
+                await self.parent_view.last_message_interaction.edit_original_response(
+                    content="差し替え画像を設定しました。画像生成ボタンを押してください。",
+                    embed=embed,
+                    view=self.parent_view,
+                    attachments=[]
+                )
+        except Exception as e:
+            await interaction.followup.send(
+                f"画像は保存されましたが、画面更新に失敗しました。\n{type(e).__name__}: {e}",
+                ephemeral=True
+            )
+            return
+
+        await interaction.followup.send(
+            "差し替え画像を設定しました。",
+            ephemeral=True
+        )
+
 
 class CharacterSelect(discord.ui.Select):
     def __init__(self, view, options):
@@ -1425,12 +1585,17 @@ class CharacterSelect(discord.ui.Select):
         self.parent_view.current_character_index = selected_index
 
         selected_char = self.parent_view.characters[selected_index]
+        self.parent_view.refresh_custom_splash_button()
         embed = build_selected_character_embed(
             data=self.parent_view.data,
             char=selected_char,
             characters_data=self.parent_view.characters_data,
             loc_data=self.parent_view.loc_data,
-            score_mode=self.parent_view.score_mode
+            score_mode=self.parent_view.score_mode,
+            custom_splash_state=get_custom_splash_state_text(
+                self.parent_view,
+                selected_index
+            )
         )
 
         await interaction.response.edit_message(
@@ -1451,13 +1616,19 @@ class ScoreModeButton(discord.ui.Button):
         self.parent_view.refresh_button_styles()
 
         if self.parent_view.current_page == "character" and self.parent_view.current_character_index is not None:
+            self.parent_view.refresh_custom_splash_button()
+
             selected_char = self.parent_view.characters[self.parent_view.current_character_index]
             embed = build_selected_character_embed(
                 data=self.parent_view.data,
                 char=selected_char,
                 characters_data=self.parent_view.characters_data,
                 loc_data=self.parent_view.loc_data,
-                score_mode=self.parent_view.score_mode
+                score_mode=self.parent_view.score_mode,
+                custom_splash_state=get_custom_splash_state_text(
+                    self.parent_view,
+                    self.parent_view.current_character_index
+                )
             )
             await interaction.response.edit_message(
                 content="スコア方式を変更しました。画像生成ボタンを押してください。",
@@ -1473,6 +1644,8 @@ class ScoreModeButton(discord.ui.Button):
                 uid=self.parent_view.uid,
                 guild=interaction.guild
             )
+            self.parent_view.refresh_custom_splash_button()
+
             if namecard_file:
                 await interaction.response.edit_message(
                     content="プロフィールを表示中です。",
@@ -1487,6 +1660,50 @@ class ScoreModeButton(discord.ui.Button):
                     attachments=[],
                     view=self.parent_view
                 )
+
+
+class ChangeImageButton(discord.ui.Button):
+    def __init__(self, view):
+        super().__init__(label="画像を変更する", style=discord.ButtonStyle.primary, row=3)
+        self.parent_view = view
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.parent_view.current_page != "character" or self.parent_view.current_character_index is None:
+            await interaction.response.send_message(
+                "先にキャラクターを選択してください。",
+                ephemeral=True
+            )
+            return
+
+        index = self.parent_view.current_character_index
+        is_enabled = self.parent_view.custom_splash_enabled.get(index, False)
+
+        if is_enabled:
+            self.parent_view.custom_splash_enabled[index] = False
+            self.parent_view.refresh_custom_splash_button()
+
+            selected_char = self.parent_view.characters[index]
+            embed = build_selected_character_embed(
+                data=self.parent_view.data,
+                char=selected_char,
+                characters_data=self.parent_view.characters_data,
+                loc_data=self.parent_view.loc_data,
+                score_mode=self.parent_view.score_mode,
+                custom_splash_state=get_custom_splash_state_text(
+                    self.parent_view,
+                    index
+                )
+            )
+
+            await interaction.response.edit_message(
+                content="差し替え画像をOFFにしました。画像生成時は元のスプラッシュアートを使用します。",
+                embed=embed,
+                view=self.parent_view
+            )
+            return
+
+        self.parent_view.last_message_interaction = interaction
+        await interaction.response.send_modal(CustomSplashUploadModal(self.parent_view))
 
 
 class GenerateImageButton(discord.ui.Button):
@@ -1513,8 +1730,17 @@ class GenerateImageButton(discord.ui.Button):
             score_mode=self.parent_view.score_mode
         )
 
+        index = self.parent_view.current_character_index
+        custom_splash_bytes = None
+
+        if self.parent_view.custom_splash_enabled.get(index, False):
+            custom_splash_bytes = self.parent_view.custom_splash_map.get(index)
+
         try:
-            image_buffer = generation(generation_data)
+            image_buffer = generation(
+                generation_data,
+                custom_splash_bytes=custom_splash_bytes
+            )
             file = discord.File(image_buffer, filename="buildcard.png")
 
             await interaction.edit_original_response(
@@ -1567,6 +1793,11 @@ class CharacterSelectView(discord.ui.View):
         self.current_character_index = None
         self.score_mode = "atk"
 
+        self.custom_splash_map = {}
+        self.custom_splash_enabled = {}
+        self.message = None
+        self.last_message_interaction = None
+
         options = [
             discord.SelectOption(
                 label="プロフィール",
@@ -1603,12 +1834,27 @@ class CharacterSelectView(discord.ui.View):
             self.score_buttons.append(button)
             self.add_item(button)
 
+        self.custom_splash_button = ChangeImageButton(self)
+        self.add_item(self.custom_splash_button)
         self.add_item(GenerateImageButton(self))
         self.refresh_button_styles()
+        self.refresh_custom_splash_button()
 
     def refresh_button_styles(self):
         for button in self.score_buttons:
             button.style = discord.ButtonStyle.primary if button.mode == self.score_mode else discord.ButtonStyle.secondary
+
+    def refresh_custom_splash_button(self):
+        index = self.current_character_index
+        enabled = (
+            index is not None and
+            self.custom_splash_enabled.get(index, False)
+        )
+
+        self.custom_splash_button.label = "元に戻す" if enabled else "画像を変更する"
+        self.custom_splash_button.style = (
+            discord.ButtonStyle.danger if enabled else discord.ButtonStyle.primary
+        )
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.author_id:
@@ -1742,20 +1988,24 @@ class UIDModal(discord.ui.Modal):
         )
 
         if namecard_file:
-            await interaction.followup.send(
+            sent_message = await interaction.followup.send(
                 content="プロフィールを表示中です。",
                 embed=profile_embed,
                 file=namecard_file,
                 view=view,
-                ephemeral=True
+                ephemeral=True,
+                wait=True
             )
         else:
-            await interaction.followup.send(
+            sent_message = await interaction.followup.send(
                 content="プロフィールを表示中です。",
                 embed=profile_embed,
                 view=view,
-                ephemeral=True
+                ephemeral=True,
+                wait=True
             )
+
+        view.message = sent_message
 
 
 class UIDInputButton(discord.ui.Button):
