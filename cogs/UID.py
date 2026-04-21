@@ -131,6 +131,7 @@ SCORE_MODE_LABELS = {
     "hp": "HP",
     "er": "元素チャージ",
     "em": "元素熟知",
+    "crit": "会心のみ",
 }
 
 
@@ -630,6 +631,13 @@ def get_element_name_from_char(char, characters_data):
     return best_name
 
 def artifact_score_value_from_sub(sub_name: str, sub_value: float, score_mode: str):
+    if score_mode == "crit":
+        if sub_name == "会心率":
+            return sub_value * 2
+        if sub_name == "会心ダメージ":
+            return sub_value
+        return 0.0
+
     if sub_name == "会心率":
         return sub_value * 2
     if sub_name == "会心ダメージ":
@@ -643,7 +651,7 @@ def artifact_score_value_from_sub(sub_name: str, sub_value: float, score_mode: s
     if score_mode == "hp" and sub_name == "HPパーセンテージ":
         return sub_value
     if score_mode == "er" and sub_name == "元素チャージ効率":
-        return sub_value
+        return sub_value * 0.9
     if score_mode == "em" and sub_name == "元素熟知":
         return sub_value / 4
     return 0.0
@@ -1827,6 +1835,7 @@ class CharacterSelectView(discord.ui.View):
             ("hp", "HP", 2),
             ("er", "元素チャージ", 2),
             ("em", "元素熟知", 2),
+            ("crit", "会心のみ", 2),
         ]
 
         for mode, label, row in button_defs:
