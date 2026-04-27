@@ -130,6 +130,7 @@ SCORE_MODE_LABELS = {
     "def08": "防御(×0.8)",
     "hp": "HP",
     "er": "元素チャージ",
+    "er09": "元チャ(×0.9)",
     "em": "元素熟知",
     "crit": "会心のみ",
 }
@@ -651,6 +652,8 @@ def artifact_score_value_from_sub(sub_name: str, sub_value: float, score_mode: s
     if score_mode == "hp" and sub_name == "HPパーセンテージ":
         return sub_value
     if score_mode == "er" and sub_name == "元素チャージ効率":
+        return sub_value
+    if score_mode == "er09" and sub_name == "元素チャージ効率":
         return sub_value * 0.9
     if score_mode == "em" and sub_name == "元素熟知":
         return sub_value / 4
@@ -1832,8 +1835,9 @@ class CharacterSelectView(discord.ui.View):
             ("atk", "攻撃", 1),
             ("def", "防御", 1),
             ("def08", "防御(×0.8)", 1),
-            ("hp", "HP", 2),
-            ("er", "元素チャージ", 2),
+            ("hp", "HP", 1),
+            ("er", "元チャ", 2),
+            ("er09", "元チャ(×0.9)", 2),
             ("em", "元素熟知", 2),
             ("crit", "会心のみ", 2),
         ]
