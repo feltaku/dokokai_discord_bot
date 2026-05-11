@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+import aiohttp
+import asyncio
 
 
 CHANNEL_ID = 1430175646381772871
@@ -103,7 +105,22 @@ class JoinCog(commands.Cog):
 
         view = Button_Call()
         if image_url:
-            embed.set_image(url=image_url)
+            success = False
+
+            async with aiohttp.ClientSession() as session:
+                for _ in range(5):
+                    try:
+                        async with session.get(image_url) as resp:
+                            if resp.status == 200:
+                                success = True
+                                break
+                    except Exception:
+                        pass
+
+                    await asyncio.sleep(3)
+
+            if success:
+                embed.set_image(url=image_url)
 
         await channel.send(embed=embed, view=view)
 
