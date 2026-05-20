@@ -4097,5 +4097,29 @@
   "NameTextMapHash": 10000130,
   "QualityType": "QUALITY_ORANGE",
   "WeaponType": "WEAPON_BOW"
+},
+"10000131": {
+  "Element": "Fire",
+  "SkillOrder": [11311, 11312, 11315],
+  "ProudMap": {
+    "11311": 13131, 
+    "11312": 13132, 
+    "11315": 13139
+  },
+  "NameTextMapHash": 10000131,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_CATALYST"
+},
+"10000132": {
+  "Element": "Wind",
+  "SkillOrder": [11321, 11322, 11325],
+  "ProudMap": {
+    "11321": 13231, 
+    "11322": 13232, 
+    "11325": 13239
+  },
+  "NameTextMapHash": 10000132,
+  "QualityType": "QUALITY_PURPLE",
+  "WeaponType": "WEAPON_CATALYST"
 }
 }
