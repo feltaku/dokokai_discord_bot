@@ -476,8 +476,14 @@ def get_weapon_info(char, loc_data):
         flat = equip.get("flat", {})
         weapon_data = equip.get("weapon", {})
 
-        name_hash = flat.get("nameTextMapHash")
-        weapon_name = get_localized_text(loc_data, name_hash, "ja") or "不明武器"
+        weapon_id = weapon_data.get("itemId") or equip.get("itemId")
+
+        weapon_name = get_localized_text(loc_data, weapon_id, "ja")
+
+        if not weapon_name:
+            name_hash = flat.get("nameTextMapHash")
+            weapon_name = get_localized_text(loc_data, name_hash, "ja") or "不明武器"
+            
         weapon_level = int(weapon_data.get("level", 1))
         rank_level = int(flat.get("rankLevel", 1))
 
