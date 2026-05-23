@@ -4121,5 +4121,17 @@
   "NameTextMapHash": 10000132,
   "QualityType": "QUALITY_PURPLE",
   "WeaponType": "WEAPON_CATALYST"
+},
+"10000129": {
+  "Element": "Ice",
+  "SkillOrder": [11291, 11292, 11295],
+  "ProudMap": {
+    "11291": 12931,
+    "11292": 12932,
+    "11295": 12939
+  },
+  "NameTextMapHash": 10000129,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_POLE"
 }
 }
