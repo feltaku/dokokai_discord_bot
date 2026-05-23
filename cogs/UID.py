@@ -1579,7 +1579,8 @@ class CharacterSelect(discord.ui.Select):
                 await interaction.response.edit_message(
                     content="プロフィールを表示中です。",
                     embed=embed,
-                    attachments=[namecard_file],
+                    file=namecard_file,
+                    attachments=[],
                     view=self.parent_view
                 )
             else:
@@ -1612,6 +1613,7 @@ class CharacterSelect(discord.ui.Select):
         await interaction.response.edit_message(
             content="キャラクターを選択しました。画像生成ボタンを押してください。",
             embed=embed,
+            attachments=[],
             view=self.parent_view
         )
 
@@ -1644,6 +1646,7 @@ class ScoreModeButton(discord.ui.Button):
             await interaction.response.edit_message(
                 content="スコア方式を変更しました。画像生成ボタンを押してください。",
                 embed=embed,
+                attachments=[],
                 view=self.parent_view
             )
         else:
@@ -1661,7 +1664,7 @@ class ScoreModeButton(discord.ui.Button):
                 await interaction.response.edit_message(
                     content="プロフィールを表示中です。",
                     embed=embed,
-                    attachments=[namecard_file],
+                    attachments=[],
                     view=self.parent_view
                 )
             else:
