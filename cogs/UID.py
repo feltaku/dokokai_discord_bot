@@ -483,7 +483,7 @@ def get_weapon_info(char, loc_data):
         if not weapon_name:
             name_hash = flat.get("nameTextMapHash")
             weapon_name = get_localized_text(loc_data, name_hash, "ja") or "不明武器"
-            
+
         weapon_level = int(weapon_data.get("level", 1))
         rank_level = int(flat.get("rankLevel", 1))
 
@@ -721,7 +721,17 @@ def get_artifacts_data(char, loc_data, score_mode: str):
         if not slot_key:
             continue
 
-        set_name = get_localized_text(loc_data, flat.get("setNameTextMapHash"), "ja") or "不明"
+        reliquary_set_id = (
+            reliquary.get("setId")
+            or flat.get("setId")
+            or equip.get("setId")
+        )
+
+        set_name = get_localized_text(loc_data, reliquary_set_id, "ja")
+
+        if not set_name:
+            set_name = get_localized_text(loc_data, flat.get("setNameTextMapHash"), "ja") or "不明"
+
         atftype_for_counter.append(set_name)
 
         level = int(reliquary.get("level", 1)) - 1
