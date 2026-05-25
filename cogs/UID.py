@@ -32,6 +32,17 @@ STYGIAN_DIFFICULTY_MAP = {
     6: "ultimate",
 }
 
+STYGIAN_EMOJI_MAP = {
+    "easy": "<:easy:1493502502082183259>",
+    "normal": "<:normal:1493502604758745168>",
+    "hard": "<:hard:1493502561171406898>",
+    "master": "<:master:1493502584739205212>",
+    "extra": "<:extra:1493502541277958145>",
+    "ultimate": "<:ultimate:1493502624102875346>",
+}
+
+SPECIAL_STYGIAN_EMOJI = "<:yabaine:1493503062600323082>"
+
 HTTP = requests.Session()
 _JSON_CACHE = {}
 _IMAGE_CACHE = {}
@@ -458,14 +469,12 @@ def get_guild_emoji_text(guild, emoji_name: str) -> str:
 
 def get_stygian_emoji_text(guild, difficulty: str | None, seconds: int | None) -> str:
     if difficulty == "ultimate" and seconds is not None and seconds <= 180:
-        special_emoji = get_guild_emoji_text(guild, "yabaine")
-        if special_emoji:
-            return special_emoji
+        return SPECIAL_STYGIAN_EMOJI
 
     if not difficulty:
         return ""
 
-    return get_guild_emoji_text(guild, difficulty)
+    return STYGIAN_EMOJI_MAP.get(difficulty, "")
 
 
 def get_weapon_info(char, loc_data):
