@@ -10,6 +10,7 @@ import discord
 import requests
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageEnhance, ImageFile, ImageFont, ImageOps
+from utils.team_card import create_single_team_card, create_team_card
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -1907,6 +1908,275 @@ class CharacterSelectView(discord.ui.View):
         return True
 
 
+class TeamCharacterSelect(discord.ui.Select):
+    def __init__(self, view):
+        options = []
+
+        selected_indexes = {item["index"] for item in view.team_selections}
+
+        for index, char in enumerate(view.characters):
+            if index in selected_indexes:
+                continue
+
+            name = get_character_name(
+                char,
+                view.characters_data,
+                view.loc_data
+            )
+            level = char.get("propMap", {}).get("4001", {}).get("val", "不明")
+
+            options.append(
+                discord.SelectOption(
+                    label=name[:100],
+                    description=f"Lv.{level}",
+                    value=str(index)
+                )
+            )
+
+        super().__init__(
+            placeholder=f"{len(view.team_selections) + 1}人目のキャラクターを選択してください",
+            min_values=1,
+            max_values=1,
+            options=options[:25],
+            row=0
+        )
+
+        self.parent_view = view
+
+    async def callback(self, interaction: discord.Interaction):
+        self.parent_view.current_character_index = int(self.values[0])
+        self.parent_view.refresh_items()
+
+        char = self.parent_view.characters[self.parent_view.current_character_index]
+        name = get_character_name(
+            char,
+            self.parent_view.characters_data,
+            self.parent_view.loc_data
+        )
+
+        await interaction.response.edit_message(
+            content=(
+                self.parent_view.get_summary_text()
+                + f"\n\n{name} を選択しました。\n"
+                + "このキャラクターの換算方式を選んでください。"
+            ),
+            view=self.parent_view
+        )
+
+
+class TeamScoreModeButton(discord.ui.Button):
+    def __init__(self, view, mode, label, row):
+        super().__init__(
+            label=label,
+            style=discord.ButtonStyle.secondary,
+            row=row
+        )
+        self.parent_view = view
+        self.mode = mode
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.parent_view.current_character_index is None:
+            await interaction.response.send_message(
+                "先にキャラクターを選択してください。",
+                ephemeral=True
+            )
+            return
+
+        char_index = self.parent_view.current_character_index
+
+        self.parent_view.team_selections.append({
+            "index": char_index,
+            "score_mode": self.mode
+        })
+
+        self.parent_view.current_character_index = None
+
+        if len(self.parent_view.team_selections) >= 4:
+            await interaction.response.defer(ephemeral=True)
+
+            team_data = []
+
+            for item in self.parent_view.team_selections:
+                char = self.parent_view.characters[item["index"]]
+
+                generation_data = build_generation_data(
+                    raw_data=self.parent_view.data,
+                    char=char,
+                    characters_data=self.parent_view.characters_data,
+                    loc_data=self.parent_view.loc_data,
+                    score_mode=item["score_mode"]
+                )
+
+                team_data.append(generation_data)
+
+            image_buffer = create_team_card(team_data)
+            file = discord.File(image_buffer, filename="team_buildcard.png")
+
+            await interaction.edit_original_response(
+                content=(
+                    self.parent_view.get_summary_text()
+                    + "\n\nチームビルドカードを生成しました。"
+                ),
+                view=None,
+                attachments=[],
+                files=[file]
+            )
+            return
+
+        self.parent_view.refresh_items()
+
+        await interaction.response.edit_message(
+            content=(
+                self.parent_view.get_summary_text()
+                + f"\n\n{len(self.parent_view.team_selections) + 1}人目のキャラクターを選択してください。"
+            ),
+            view=self.parent_view
+        )
+
+
+class TeamCharacterSelectView(discord.ui.View):
+    def __init__(
+        self,
+        author_id,
+        uid,
+        data,
+        characters,
+        characters_data,
+        loc_data
+    ):
+        super().__init__(timeout=300)
+
+        self.author_id = author_id
+        self.uid = uid
+        self.data = data
+        self.characters = characters
+        self.characters_data = characters_data
+        self.loc_data = loc_data
+
+        self.team_selections = []
+        self.current_character_index = None
+
+        self.refresh_items()
+
+    def refresh_items(self):
+        self.clear_items()
+
+        if self.current_character_index is None:
+            self.add_item(TeamCharacterSelect(self))
+            return
+
+        modes = list(SCORE_MODE_LABELS.items())
+
+        for i, (mode, label) in enumerate(modes):
+            row = 1 if i < 4 else 2
+            self.add_item(
+                TeamScoreModeButton(
+                    view=self,
+                    mode=mode,
+                    label=label,
+                    row=row
+                )
+            )
+
+    def get_summary_text(self):
+        if not self.team_selections:
+            return "チームビルドカードを作成します。"
+
+        lines = ["現在の選択"]
+
+        for i, item in enumerate(self.team_selections):
+            char = self.characters[item["index"]]
+            name = get_character_name(
+                char,
+                self.characters_data,
+                self.loc_data
+            )
+            score_label = SCORE_MODE_LABELS.get(item["score_mode"], item["score_mode"])
+            lines.append(f"{i + 1}. {name} / {score_label}換算")
+
+        return "\n".join(lines)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                "このメニューは入力した本人のみ操作できます。",
+                ephemeral=True
+            )
+            return False
+        return True
+
+
+class TeamUIDModal(discord.ui.Modal):
+    def __init__(self, cog):
+        super().__init__(title="チームビルドカード用UIDを入力")
+        self.cog = cog
+
+        self.uid_input = discord.ui.InputText(
+            label="UID",
+            placeholder="9桁または10桁のUIDを入力してください",
+            required=True,
+            min_length=9,
+            max_length=10
+        )
+        self.add_item(self.uid_input)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        uid = self.uid_input.value.strip()
+
+        if not uid.isdigit():
+            await interaction.followup.send(
+                "UIDは数字のみで入力してください。",
+                ephemeral=True
+            )
+            return
+
+        url = f"https://enka.network/api/uid/{uid}"
+
+        try:
+            response = HTTP.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            await interaction.followup.send(
+                f"Enka APIへの接続に失敗しました。\n{type(e).__name__}: {e}",
+                ephemeral=True
+            )
+            return
+
+        if "avatarInfoList" not in data:
+            await interaction.followup.send(
+                "キャラ取得失敗。UIDが正しいか、公開設定になっているか確認してください。",
+                ephemeral=True
+            )
+            return
+
+        characters = data["avatarInfoList"]
+
+        if len(characters) < 4:
+            await interaction.followup.send(
+                "公開キャラクターが4人未満のため、チームビルドカードを作成できません。",
+                ephemeral=True
+            )
+            return
+
+        view = TeamCharacterSelectView(
+            author_id=interaction.user.id,
+            uid=uid,
+            data=data,
+            characters=characters,
+            characters_data=self.cog.characters_data,
+            loc_data=self.cog.loc_data
+        )
+
+        await interaction.followup.send(
+            content="チームに入れるキャラクターを4人選択してください。",
+            view=view,
+            ephemeral=True
+        )
+
+
 class UIDModal(discord.ui.Modal):
     def __init__(self, cog):
         super().__init__(title="UIDを入力してください")
@@ -2058,10 +2328,19 @@ class UIDInputButton(discord.ui.Button):
         await interaction.response.send_modal(UIDModal(self.cog))
 
 
+class TeamBuildCardButton(discord.ui.Button):
+    def __init__(self, cog):
+        super().__init__(label="チームビルドカードを生成", style=discord.ButtonStyle.success, row=0)
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(TeamUIDModal(self.cog))
+
 class UIDInputView(discord.ui.View):
     def __init__(self, cog):
         super().__init__(timeout=None)
         self.add_item(UIDInputButton(cog))
+        self.add_item(TeamBuildCardButton(cog))
 
 
 class GenshinCog(commands.Cog):
