@@ -4050,18 +4050,6 @@
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_CATALYST"
   },
-  "10000128": {
-    "Element": "Wind",
-    "SkillOrder": [11281, 11282, 11285],
-    "ProudMap": {
-      "11281": 12831,
-      "11282": 12832,
-      "11285": 12839
-    },
-    "NameTextMapHash": 10000128,
-    "QualityType": "QUALITY_ORANGE",
-    "WeaponType": "WEAPON_CLAYMORE"
-  },
   "10000126": {
     "Element": "Rock",
     "SkillOrder": [11261, 11262, 11265],
@@ -4086,6 +4074,30 @@
     "QualityType": "QUALITY_PURPLE",
     "WeaponType": "WEAPON_POLE"
   },
+  "10000128": {
+    "Element": "Wind",
+    "SkillOrder": [11281, 11282, 11285],
+    "ProudMap": {
+      "11281": 12831,
+      "11282": 12832,
+      "11285": 12839
+    },
+    "NameTextMapHash": 10000128,
+    "QualityType": "QUALITY_ORANGE",
+    "WeaponType": "WEAPON_CLAYMORE"
+  },
+  "10000129": {
+  "Element": "Ice",
+  "SkillOrder": [11291, 11292, 11295],
+  "ProudMap": {
+    "11291": 12931,
+    "11292": 12932,
+    "11295": 12939
+  },
+  "NameTextMapHash": 10000129,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_POLE"
+},
   "10000130": {
   "Element": "Rock",
   "SkillOrder": [11301, 11302, 11305],
@@ -4122,16 +4134,12 @@
   "QualityType": "QUALITY_PURPLE",
   "WeaponType": "WEAPON_CATALYST"
 },
-"10000129": {
+"10000133": {
   "Element": "Ice",
-  "SkillOrder": [11291, 11292, 11295],
-  "ProudMap": {
-    "11291": 12931,
-    "11292": 12932,
-    "11295": 12939
-  },
-  "NameTextMapHash": 10000129,
+  "SkillOrder": [11331, 11332, 11335],
+  "ProudMap": {"11331": 13331, "11332": 13332, "11335": 13339},
+  "NameTextMapHash": 10000133,
   "QualityType": "QUALITY_ORANGE",
-  "WeaponType": "WEAPON_POLE"
+  "WeaponType": "WEAPON_CLAYMORE"
 }
 }
