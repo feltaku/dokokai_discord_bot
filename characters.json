@@ -4141,5 +4141,21 @@
   "NameTextMapHash": 10000133,
   "QualityType": "QUALITY_ORANGE",
   "WeaponType": "WEAPON_CLAYMORE"
+},
+"10000148":{
+  "Element":"Electric",
+  "SkillOrder": [11481, 11482, 11485],
+  "ProudMap": {"11481": 14831, "11482": 14832, "11485": 14839},
+  "NameTextMapHash": 10000148,
+  "QualityType": "QUALITY_PURPLE",
+  "WeaponType": "WEAPON_POLE"  
+},
+"10000150": {
+  "Element": "Ice",
+  "SkillOrder": [11501, 11502, 11505],
+  "ProudMap": {"11501": 15031, "11502": 15032, "11505": 15039},
+  "NameTextMapHash": 10000150,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_SWORD_ONE_HAND"
 }
 }
