@@ -609,12 +609,13 @@ def get_element_name_from_char(char, characters_data):
         depot_id = char.get("skillDepotId")
 
         depot_map = {
-            701: "Wind",
             702: "Fire",
-            703: "Electric",
-            704: "Grass",
-            705: "Water",
+            703: "Water",
+            704: "Wind",
+            705: "Ice",
             706: "Rock",
+            707: "Electric",
+            708: "Grass"
         }
 
         element_code = depot_map.get(depot_id)
