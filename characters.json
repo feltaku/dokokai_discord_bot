@@ -4157,5 +4157,21 @@
   "NameTextMapHash": 10000150,
   "QualityType": "QUALITY_ORANGE",
   "WeaponType": "WEAPON_SWORD_ONE_HAND"
+},
+"10000143":{
+  "Element": "Wind",
+  "SkillOrder": [11431, 11432, 11435],
+  "ProudMap": {"11431": 14331, "11432": 14332, "11435": 14339},
+  "NameTextMapHash": 10000143,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_SWORD_ONE_HAND"
+},
+"10000140":{
+  "Element": "Water",
+  "SkillOrder": [11401, 11402, 11405],
+  "ProudMap": {"11401": 14031, "11402": 14032, "11405": 14039},
+  "NameTextMapHash": 10000140,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_CATALYST"
 }
 }
