@@ -382,7 +382,7 @@ def pil_to_bytes(img, format="PNG"):
 
 # ====ローカライズ・取得補助====
 
-def get_localized_text(loc_data: dict, text_hash, lang="ja"):
+def get_localized_text(loc_data: dict, text_hash, lang="ja", allow_shift=True):
     if text_hash is None:
         return None
 
@@ -411,6 +411,11 @@ def get_localized_text(loc_data: dict, text_hash, lang="ja"):
     v = lookup_one(base_hash)
     if v:
         return v
+
+    # ID(武器の itemId・聖遺物の setId など)で引く場合は、
+    # ハッシュずれ対策の ±512 を使わない(別の ID に誤ヒットするため)
+    if not allow_shift:
+        return None
 
     # v6.5 以降のハッシュずれ対策
     # 旧 loc.json しかない環境向けに ±512 を試す
@@ -488,7 +493,7 @@ def get_weapon_info(char, loc_data):
 
         weapon_id = weapon_data.get("itemId") or equip.get("itemId")
 
-        weapon_name = get_localized_text(loc_data, weapon_id, "ja")
+        weapon_name = get_localized_text(loc_data, weapon_id, "ja", allow_shift=False)
 
         if not weapon_name:
             name_hash = flat.get("nameTextMapHash")
@@ -619,6 +624,8 @@ def get_element_name_from_char(char, characters_data):
         }
 
         element_code = depot_map.get(depot_id)
+        if element_code is None:
+            print(f"[WARN] unknown traveler depot: avatarId={avatar_id}, depot={depot_id}")
     else:
         char_meta = characters_data.get(avatar_id, {})
         element_code = char_meta.get("Element")
@@ -738,10 +745,11 @@ def get_artifacts_data(char, loc_data, score_mode: str):
             or equip.get("setId")
         )
 
-        set_name = get_localized_text(loc_data, reliquary_set_id, "ja")
-
-        if not set_name:
-            set_name = get_localized_text(loc_data, flat.get("setNameTextMapHash"), "ja") or "不明"
+        set_name = (
+            get_localized_text(loc_data, flat.get("setNameTextMapHash"), "ja")
+            or get_localized_text(loc_data, reliquary_set_id, "ja", allow_shift=False)
+            or "不明"
+        )
 
         atftype_for_counter.append(set_name)
 
