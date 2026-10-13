@@ -21,7 +21,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGE_BASE = PROJECT_ROOT / "image"
 
 CHARACTERS_JSON_URL = PROJECT_ROOT / "characters.json"
-LOC_JSON_URL = PROJECT_ROOT / "loc.json"
+LOC_JSON_URL = PROJECT_ROOT / "loc.json"  # 項目名・ラベル用
+LOC_CHARACTER_URL = PROJECT_ROOT / "loc_character.json" # キャラクターデータ
+LOC_WEAPON_URL = PROJECT_ROOT / "loc_weapon.json" # 武器データ
+LOC_ARTIFACT_URL = PROJECT_ROOT / "loc_artifact.json" # 聖遺物データ
 NAMECARD_DIR = IMAGE_BASE / "namecard"
 
 STYGIAN_DIFFICULTY_MAP = {
@@ -436,7 +439,7 @@ def get_character_name(char, characters_data, loc_data):
     avatar_id = str(char["avatarId"])
     meta = characters_data.get(avatar_id, {})
     name_hash = meta.get("NameTextMapHash")
-    return get_localized_text(loc_data, name_hash, "ja") or f"不明キャラ({avatar_id})"
+    return get_localized_text(loc_data["character"], name_hash, "ja") or f"不明キャラ({avatar_id})"
 
 
 def get_profile_icon_url(player_info, characters_data):
@@ -493,11 +496,11 @@ def get_weapon_info(char, loc_data):
 
         weapon_id = weapon_data.get("itemId") or equip.get("itemId")
 
-        weapon_name = get_localized_text(loc_data, weapon_id, "ja", allow_shift=False)
+        weapon_name = get_localized_text(loc_data["weapon"], weapon_id, "ja", allow_shift=False)
 
         if not weapon_name:
             name_hash = flat.get("nameTextMapHash")
-            weapon_name = get_localized_text(loc_data, name_hash, "ja") or "不明武器"
+            weapon_name = get_localized_text(loc_data["weapon"], name_hash, "ja") or "不明武器"
 
         weapon_level = int(weapon_data.get("level", 1))
         rank_level = int(flat.get("rankLevel", 1))
@@ -746,8 +749,8 @@ def get_artifacts_data(char, loc_data, score_mode: str):
         )
 
         set_name = (
-            get_localized_text(loc_data, flat.get("setNameTextMapHash"), "ja")
-            or get_localized_text(loc_data, reliquary_set_id, "ja", allow_shift=False)
+            get_localized_text(loc_data["artifact"], flat.get("setNameTextMapHash"), "ja")
+            or get_localized_text(loc_data["artifact"], reliquary_set_id, "ja", allow_shift=False)
             or "不明"
         )
 
@@ -2356,7 +2359,12 @@ class GenshinCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.characters_data = load_json(CHARACTERS_JSON_URL)
-        self.loc_data = load_json(LOC_JSON_URL)
+        self.loc_data = {
+            "character": load_json(LOC_CHARACTER_URL),
+            "weapon": load_json(LOC_WEAPON_URL),
+            "artifact": load_json(LOC_ARTIFACT_URL),
+            "label": load_json(LOC_JSON_URL),
+        }
         self.uid_cache = {}
 
     @commands.slash_command(name="genshin_build", description="原神プロフィール表示ボタンを送信")
