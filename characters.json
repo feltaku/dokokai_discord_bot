@@ -4173,5 +4173,15 @@
   "NameTextMapHash": 10000140,
   "QualityType": "QUALITY_ORANGE",
   "WeaponType": "WEAPON_CATALYST"
+},
+"10000007-705": {
+  "Element": "Ice",
+  "SkillOrder": [100554, 10127, 10128],
+  "ProudMap": { "10127": 832, "10128": 839, "100554": 831 }
+},
+"10000005-505": {
+  "Element": "Ice",
+  "SkillOrder": [100544, 10127, 10128],
+  "ProudMap": { "10127": 832, "10128": 839, "100544": 830 }
 }
 }
