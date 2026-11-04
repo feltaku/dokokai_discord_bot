@@ -4183,5 +4183,21 @@
   "Element": "Ice",
   "SkillOrder": [100544, 10127, 10128],
   "ProudMap": { "10127": 832, "10128": 839, "100544": 830 }
+},
+"10000136": {
+  "Element": "Ice",
+  "SkillOrder": [11361, 11362, 11365],
+  "ProudMap": {"11361": 13631, "11362": 13632, "11365": 13639},
+  "NameTextMapHash": 10000136,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_CATALYST"
+},
+"10000137": {
+  "Element": "Ice",
+  "SkillOrder": [11371, 11372, 11375],
+  "ProudMap": {"11371": 13731, "11372": 13732, "11375": 13739},
+  "NameTextMapHash": 10000137,
+  "QualityType": "QUALITY_PURPLE",
+  "WeaponType": "WEAPON_SWORD_ONE_HAND"
 }
 }
