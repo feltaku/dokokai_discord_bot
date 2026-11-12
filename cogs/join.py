@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import aiohttp
 import asyncio
+import io
 
 
 CHANNEL_ID = 1430175646381772871
@@ -104,25 +105,37 @@ class JoinCog(commands.Cog):
         embed.description = format_form_answers(answers)
 
         view = Button_Call()
+        file = None
+        
         if image_url:
-            success = False
+            image_bytes = None
+            filename = "image.png"
 
             async with aiohttp.ClientSession() as session:
                 for _ in range(5):
                     try:
                         async with session.get(image_url) as resp:
                             if resp.status == 200:
-                                success = True
+                                image_bytes = await resp.read()
+                                content_type = resp.headers.get("Content-Type", "")
+                                if "jpeg" in content_type or "jpg" in content_type:
+                                    filename = "image.jpg"
+                                elif "png" in content_type:
+                                    filename = "image.png"
                                 break
                     except Exception:
                         pass
 
                     await asyncio.sleep(3)
 
-            if success:
-                embed.set_image(url=image_url)
+            if image_bytes:
+                file = discord.File(io.BytesIO(image_bytes), filename=filename)
+                embed.set_image(url=f"attachment://{filename}")
 
-        await channel.send(embed=embed, view=view)
+        if file:
+            await channel.send(embed=embed, view=view, file=file)
+        else:
+            await channel.send(embed=embed, view=view)
 
 
 class Button_Call(discord.ui.View):
