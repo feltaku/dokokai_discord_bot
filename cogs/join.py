@@ -167,6 +167,7 @@ class Inputname_modal(discord.ui.Modal):
             content=f"**{self.comment.value}**\n{display}({username})が確認しました",
             embed=None,
             view=None
+            attachments=[]
         )
 
 
