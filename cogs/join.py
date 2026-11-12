@@ -166,7 +166,7 @@ class Inputname_modal(discord.ui.Modal):
         await interaction.response.edit_message(
             content=f"**{self.comment.value}**\n{display}({username})が確認しました",
             embed=None,
-            view=None
+            view=None,
             attachments=[]
         )
 
