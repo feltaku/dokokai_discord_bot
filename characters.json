@@ -3271,8 +3271,19 @@
     "QualityType": "QUALITY_ORANGE",
     "WeaponType": "WEAPON_POLE"
   },
-  "10000117": {},
-  "10000118": {},
+  "10000117": {
+  "SkillOrder": [11171, 11172, 111754],
+  "NameTextMapHash": 10000117,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_SWORD_ONE_HAND"
+},
+"10000118": {
+  "SkillOrder": [11171, 11172, 111754],
+  "ProudMap": {"11181": 11831, "11182": 11832, "11185": 11839},
+  "NameTextMapHash": 10000118,
+  "QualityType": "QUALITY_ORANGE",
+  "WeaponType": "WEAPON_SWORD_ONE_HAND"
+},
   "10000119": {
     "Element": "Grass",
     "Consts": [
