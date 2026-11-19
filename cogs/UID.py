@@ -169,12 +169,25 @@ def prepare_custom_splash_image(image_bytes: bytes) -> Image.Image:
     with Image.open(BytesIO(image_bytes)) as im:
         img = ImageOps.exif_transpose(im).convert("RGBA")
 
-    return ImageOps.fit(
-        img,
-        CUSTOM_SPLASH_SIZE,
-        method=Image.Resampling.LANCZOS,
-        centering=(0.5, 0.5)
+    target_height = 1024
+    aspect_ratio = img.width / img.height
+    target_width = int(target_height * aspect_ratio)
+    
+    resized_img = img.resize(
+        (target_width, target_height),
+        resample=Image.Resampling.LANCZOS
     )
+
+    canvas_width = 2048
+    canvas_height = 1024
+    base_canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
+
+    paste_x = (canvas_width - target_width) // 2
+    paste_y = (canvas_height - target_height) // 2
+
+    base_canvas.paste(resized_img, (paste_x, paste_y), mask=resized_img)
+
+    return base_canvas
 
 
 def get_custom_splash_state_text(view, character_index):
@@ -629,6 +642,37 @@ def get_element_name_from_char(char, characters_data):
         element_code = depot_map.get(depot_id)
         if element_code is None:
             print(f"[WARN] unknown traveler depot: avatarId={avatar_id}, depot={depot_id}")
+
+    elif avatar_id in ("10000117"):
+        depot_id = char.get("skillDepotId")
+        
+        depot_map = {
+            11702: "Fire",     # 炎
+            11703: "Water",    # 水
+            11704: "Electro",  # 雷
+            11705: "Ice",      # 氷
+            11706: "Wind",     # 風（今回判明）[cite: 6]
+            11707: "Rock",     # 岩[cite: 5]
+            11708: "Grass",    # 草
+        }
+
+        element_code = depot_map.get(depot_id)
+
+    elif avatar_id in ("10000118"):
+        depot_id = char.get("skillDepotId")
+        
+        depot_map = {
+            11802: "Fire",     # 炎
+            11803: "Water",    # 水
+            11804: "Electro",  # 雷
+            11805: "Ice",      # 氷
+            11806: "Wind",     # 風（今回判明）[cite: 6]
+            11807: "Rock",     # 岩[cite: 5]
+            11808: "Grass",    # 草
+        }
+
+        element_code = depot_map.get(depot_id)
+    
     else:
         char_meta = characters_data.get(avatar_id, {})
         element_code = char_meta.get("Element")
@@ -915,11 +959,14 @@ def generation(data, custom_splash_bytes: bytes | None = None):
     else:
         character_asset_folder = CharacterName
 
-    # 立ち絵
+# 立ち絵
     if custom_splash_bytes is not None:
+        # 2048x1024のキャンバスに整えられた画像を準備
         CharacterImage = prepare_custom_splash_image(custom_splash_bytes)
     else:
         if CharacterName in ['蛍', '空', '旅人']:
+            traveler_folder = f'蛍({element})' if CharacterName in ['蛍', '旅人'] else f'空({element})'
+            character_asset_folder = traveler_folder
             if CharacterCostume:
                 CharacterImage = open_image_url(
                     github_url("character", "旅人", f"{CharacterCostume}.png"),
@@ -942,16 +989,16 @@ def generation(data, custom_splash_bytes: bytes | None = None):
                     "RGBA"
                 )
 
-        CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
-        CharacterImage = CharacterImage.resize(
-            (int(CharacterImage.width * 0.75), int(CharacterImage.height * 0.75))
-        )
+    # ★ここから下は、カスタム画像も公式画像も【全く同じ動作（本来の画像を置く動作）】をそのまま実行する
+    CharacterImage = CharacterImage.crop((289, 0, 1728, 1024))
+    CharacterImage = CharacterImage.resize(
+        (int(CharacterImage.width * 0.75), int(CharacterImage.height * 0.75))
+    )
 
     Shadow = open_image_url(
         github_url("Assets", "Shadow.png"),
         "RGBA"
     ).resize(Base.size)
-
 
     CharacterAvatarMask = CharacterImage.copy()
 
